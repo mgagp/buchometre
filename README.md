@@ -47,10 +47,15 @@ même sans feu :
     py outils\generer_site.py              (réécrit rapports\, puis F5 dans le navigateur)
 Sans connexion internet, omettre `--maj` : les sources déjà présentes sont utilisées.
 
-### Stock 2026-2027 et règle de budget (mise à jour du 2026-11-22, 12 h 51)
-Tarif Flex D confirmé. Pas d'achat de bois : stock initial ≈ 1,5 corde × 232 bûches = 348 bûches
-(paramètres `cordes_restantes` et `buches_par_corde` dans `outils/protocole.py`, ou mieux : colonne `stock_compte`).
+### Stock 2026-2027 et règle de budget (révision du 2026-11-22 : inventaire mesuré)
+Tarif Flex D confirmé. Pas d'achat de bois. Stock de départ = **inventaire mesuré de la pile** :
+130,67 pi² de face × 6,7 bûches/pi² ≈ **876 bûches** (≈ 3,8 cordes à 232 ; 4,1 cordes de face 4 × 8 pi),
+fourchette 876 à 947 (densité 6,7 à 7,25), bûches de 16 po confirmées, une seule rangée présumée (à confirmer).
+Mesures : `data/inventaire_pile_2026-11.csv` ; calcul : `outils/inventaire.py` ; page `rapports/inventaire.html` ;
+texte téléchargeable `rapports/inventaire-pile-2026-11.md`. Le croquis de Marc va dans `rapports/img/croquis-pile.png`.
+L'inventaire est un paramètre daté, pas une ligne de saisie ; la colonne `stock_compte` sert à un vrai recomptage.
+(1re estimation remplacée : ≈ 1,5 corde × 232 = 348 bûches.)
 La page Saisie compare le stock restant réel au plan et à la réserve pour les événements.
 Règle : événements toujours (4-5 bûches chacun) ; réserve de 5 bûches par événement encore attendu ;
-jours cœur ≤ −8 °C jusqu'à 10 bûches si la réserve est respectée ; surplus libéré à partir du 1er février ;
-si le stock passe 50 bûches sous le plan, événements seulement.
+jours cœur ≤ −5 °C jusqu'à 12 bûches si la réserve est respectée (avant : −8 °C, 10) ; surplus libéré à partir du
+1er janvier (avant : 1er février) ; si le stock passe 50 bûches sous le plan, événements seulement.

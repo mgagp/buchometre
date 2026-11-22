@@ -15,7 +15,7 @@ SOURCES = [
     ("Hydro-Québec, Historique des résultats (bilan par hiver)", "https://www.hydroquebec.com/residentiel/mieux-consommer/pourquoi-mieux-consommer/bilan-efforts-collectifs/historique-resultats.html"),
     ("Open-Meteo, API d'archives historiques (réanalyse ERA5), point 45,40 N / −74,03 O (Vaudreuil-Dorion)", "https://open-meteo.com/en/docs/historical-weather-api"),
 ]
-SOUSNAV = [("protocole.html", "1. Positionnement"), ("protocole-meteo.html", "2. Étude météo"), ("protocole-sim.html", "3. Simulation : sommaire"),
+SOUSNAV = [("inventaire.html", "0. Inventaire de la pile"), ("protocole.html", "1. Positionnement"), ("protocole-meteo.html", "2. Étude météo"), ("protocole-sim.html", "3. Simulation : sommaire"),
            ("protocole-sim-mensuel.html", "mensuel"), ("protocole-sim-jours.html", "jour par jour"), ("protocole-saisie.html", "4. Saisie et suivi")]
 
 
@@ -66,16 +66,16 @@ def main(quand):
     stk_j = {lib: [cc[h].get(k, (None, None))[0] for h in complets] for lib, k in jalons}
     bpe = SK["buches_par_evt_typ"]
     h = ["<div class='cartes'>",
-         carte(f"≈ {NB}", "bûches en stock (≈ 1,5 corde)", "prov", "#bois", f"{H['cordes_restantes']} × {H['buches_par_corde']} bûches/corde (hypothèse fragile)"),
+         carte(f"≈ {NB}", f"bûches en stock (≈ {nb(SK['cordes'], 1)} cordes)", "prov", "inventaire.html", f"inventaire mesuré de la pile, 22 nov. ; fourchette {SK['inventaire']['param']['fourchette_retenue'][0]}–{SK['inventaire']['param']['fourchette_retenue'][1]} (à confirmer)"),
          carte(f"{min(r['jours_feu'] for r in rg):.0f}–{max(r['jours_feu'] for r in rg):.0f}", "jours de feu que le stock permet", "neutre", "protocole-sim.html", "selon la météo des 3 hivers"),
          carte(f"{argent(min(r['valeur'] for r in rg), 0)}–{argent(max(r['valeur'] for r in rg), 0)}", "valeur évitée cet hiver (règle)", "ok", "protocole-sim.html",
                f"optimum a posteriori {argent(min(r['valeur'] for r in op), 0)}–{argent(max(r['valeur'] for r in op), 0)} ; feu chaque jour {argent(min(r['valeur'] for r in qd), 0)}–{argent(max(r['valeur'] for r in qd), 0)}"),
          carte("100 %", "événements Flex D couverts", "ok", "protocole-sim.html", f"{min(r['evt'] for r in rg):.0f} à {max(r['evt'] for r in rg):.0f} événements selon l'hiver"),
          carte(f"{bpe[0]}–{bpe[-1]}", "bûches par événement", "neutre", "#regles", "allumer 30-60 min avant 6 h ou 16 h"),
-         carte(f"+{argent(min(marg), 0)}", "valeur d'une corde de plus", "ko", "#appoint", f"pour ≈ {argent(H['prix_corde_remplacement'], 0)} : achat d'appoint non rentable"),
+         carte(f"+{argent(min(marg_r), 0)}–{argent(max(marg_r), 0)}", "valeur d'une corde de plus (règle)", "ko", "#appoint", f"pour ≈ {argent(H['prix_corde_remplacement'], 0)} : achat d'appoint non rentable"),
          "</div>"]
     h.append("<h2>En bref</h2><div class='info'><ol>"
-             "<li><b>La situation</b> : tu es au <b>tarif Flex D</b> (confirmé le 22 nov. 2026) et tu n'as pas acheté de bois : il reste ≈ 1,5 corde, soit ≈ " + str(NB) + " bûches. "
+             "<li><b>La situation</b> : tu es au <b>tarif Flex D</b> (confirmé le 22 nov. 2026) et tu n'as pas acheté de bois. L'<a href='inventaire.html'>inventaire mesuré de la pile</a> (22 nov.) donne ≈ " + str(NB) + " bûches (≈ " + nb(SK["cordes"], 1) + " cordes), bien plus que la 1re estimation de " + str(H["stock_ancien"]) + ". "
              "Ce bois est déjà payé : la question n'est plus « le bois est-il rentable ? » mais <b>« où placer ces " + str(NB) + " bûches pour éviter le plus d'électricité possible cet hiver ? »</b></li>"
              f"<li><b>Pourquoi les événements d'abord</b> : hors événement, un kWh évité vaut {nb(F['p2_hiver'] * 100, 3)} ¢ ; pendant un événement (6 h–10 h ou 16 h–20 h, annoncé la veille), "
              f"il vaut {nb(F['pointe'] * 100, 3)} ¢, cinq fois plus. Une bûche brûlée un jour ordinaire vaut {argent(V['flex_hors_evt'])} ; sa chaleur livrée pendant un événement vaut jusqu'à {argent(V['flex_evt'])}.</li>"
@@ -84,7 +84,7 @@ def main(quand):
              "et à brûler quand la maison peut absorber la chaleur (≈ 0,45 bûche par degré-jour au plus).</li>"
              f"<li><b>Résultat</b> : en suivant la règle de budget ci-dessous, le stock couvre <b>tous les événements</b> et ≈ {min(r['jours_feu'] for r in rg):.0f} à {max(r['jours_feu'] for r in rg):.0f} jours de feu, "
              f"pour ≈ {argent(min(r['valeur'] for r in rg), 0)} à {argent(max(r['valeur'] for r in rg), 0)} d'électricité évitée (taxes incl.), contre {argent(min(r['valeur'] for r in qd), 0)} à "
-             f"{argent(max(r['valeur'] for r in qd), 0)} si on étalait le même bois sur chaque jour.</li></ol></div>")
+             f"{argent(max(r['valeur'] for r in qd), 0)} si on étalait le même bois sur chaque jour. Avec ce stock, le bois n'est plus la contrainte : voir <a href='#revision'>ce que change l'inventaire</a>.</li></ol></div>")
     h.append("<h2 id='tarif'>Le tarif Flex D (confirmé)</h2>"
              "<table><tr><th>Élément</th><th>Flex D, tarifs au 1er avril 2026</th></tr>"
              f"<tr><td>Hiver (1er déc.–31 mars), hors événement</td><td>{nb(F['p1_hiver'] * 100, 3)} ¢/kWh jusqu'à 40 kWh × jours de la période, puis <b>{nb(F['p2_hiver'] * 100, 3)} ¢</b></td></tr>"
@@ -105,38 +105,68 @@ def main(quand):
              f"<p class='petit'>Valeur = {nb(kb, 2)} kWh/bûche × prix × 1,14975 (TPS+TVQ). Pendant un événement, on suppose qu'une bûche allumée juste avant livre {pct(H['part_buche_dans_fenetre'])} "
              f"de sa chaleur dans la fenêtre, et que le besoin de chauffage dans la fenêtre est plafonné (≈ {nb(H['facteur_pointe_horaire'], 2)} × la moyenne horaire du jour) : "
              f"d'où {bpe[0]} à {bpe[-1]} bûches par événement (−6 °C à −18 °C).</p>")
-    h.append("<h2 id='bois'>Le stock de bois</h2><ul>"
-             f"<li><b>Stock</b> : ≈ {H['cordes_restantes']} corde (estimation de Marc) × {H['buches_par_corde']} bûches/corde = <b>≈ {NB} bûches</b>.</li>"
-             f"<li><b>D'où vient 232 bûches/corde</b> : 928 bûches projetées pour 2023-24 ÷ 4 cordes. C'est fragile : le 928 est lui-même une projection (649 bûches mesurées jusqu'au 16 févr.), "
-             "les 4 cordes ne sont pas écrites dans le chiffrier, et la taille des bûches varie. Une erreur de ±25 % est plausible (≈ 260 à 435 bûches). "
-             "<b>Le plus simple : compter le tas une fois</b> (ou une rangée) et corriger le stock dans la saisie.</li>"
+    IV = SK["inventaire"]; RA = H["regle_ancienne"]
+    anc = [SR[hh]["ancien_ancienne_regle"] for hh in complets]; sar = [SR[hh]["stock_ancienne_regle"] for hh in complets]
+    sb = [SR[hh]["regle_stock_bas"] for hh in complets]; sh = [SR[hh]["regle_stock_haut"] for hh in complets]
+    mm = lambda L, k, f=nb: f"{f(min(r[k] for r in L), 0) if f is argent else f(min(r[k] for r in L))}–{f(max(r[k] for r in L), 0) if f is argent else f(max(r[k] for r in L))}"
+    h.append("<h2 id='bois'>Le stock de bois (révisé le 22 nov. 2026)</h2><ul>"
+             f"<li><b>Stock de départ</b> : <b>≈ {NB} bûches</b>, tiré de l'<a href='inventaire.html'>inventaire mesuré de la pile</a> "
+             f"({nb(IV['surface'], 2)} pi² de face × {nb(IV['param']['densite'], 1)} bûches/pi²), soit ≈ {nb(SK['cordes'], 1)} cordes à {H['buches_par_corde']} bûches/corde "
+             f"ou ≈ {nb(IV['cordes_face'], 1)} cordes de face (4 × 8 pi, bûches de 16 po). Fourchette retenue : {IV['param']['fourchette_retenue'][0]} à {IV['param']['fourchette_retenue'][1]} bûches ; "
+             f"tests plus larges : {IV['buches_bas']} à {IV['buches_haut']}. <b>À confirmer par Marc</b> : nombre de rangées en profondeur (une seule présumée) ; densité tirée d'une seule corde d'étalonnage.</li>"
+             f"<li><b>Ce qu'il remplace</b> : la 1re estimation du même jour, ≈ {nb(H['cordes_restantes_ancien'], 1)} corde × {H['buches_par_corde']} = {H['stock_ancien']} bûches (fourchette 260 à 435), "
+             "qui reposait sur une impression et non sur une mesure. L'écart (× 2,5) est signalé : 4,1 cordes, c'est presque l'achat complet de 2023-24 (4 cordes) ; voir la "
+             "<a href='inventaire.html#plausibilite'>vérification de plausibilité</a>.</li>"
+             "<li><b>Paramètre daté</b> : le stock de départ est un paramètre (<code>data/inventaire_pile_2026-11.csv</code>, <code>outils/inventaire.py</code>), pas une ligne de saisie. "
+             "La colonne <code>stock_compte</code> de la saisie reste réservée à un vrai recomptage.</li>"
              "<li><b>Coût</b> : déjà payé (coût irrécupérable) ; il n'entre pas dans la décision de brûler. "
              f"Repère secondaire : valeur de remplacement ≈ {argent(H['prix_corde_remplacement'])} la corde (425 $ ÷ 4 + 25 $), soit ≈ {argent(SK['valeur_remplacement'], 0)} pour le stock.</li></ul>")
-    h.append("<h2 id='regles'>La règle de budget</h2><ol>"
+    h.append("<h2 id='revision'>Ce que change l'inventaire (révision du 22 nov. 2026)</h2>"
+             "<table><tr><th>Simulation (3 météos)</th><th>Stock</th><th>Jours de feu</th><th>Bûches brûlées</th><th>Restantes au 31 mars</th><th>Événements couverts</th><th>Valeur évitée</th></tr>" +
+             "".join(f"<tr{' class=tot' if k == 'rg' else ''}><td>{lib}</td><td class=n>{L[0]['stock_initial']:.0f}</td><td class=n>{mm(L, 'jours_feu')}</td><td class=n>{mm(L, 'buches')}</td>"
+                     f"<td class=n>{mm(L, 'reste')}</td><td class=n>{'tous' if all(r['evt_couverts'] == r['evt'] for r in L) else 'non'}</td><td class=n>{mm(L, 'valeur', argent)}</td></tr>"
+                     for k, lib, L in (("a", f"Avant : ancien stock, ancienne règle (≤ {nb(RA['seuil'])} °C, {RA['max']} bûches, surplus au 1er févr.)", anc),
+                                       ("b", "Inventaire, ancienne règle", sar),
+                                       ("rg", f"<b>Inventaire, règle révisée</b> (≤ {nb(H['regle_seuil_coeur'])} °C, {H['regle_max_coeur']} bûches, surplus au 1er janv.)", rg),
+                                       ("q", "Inventaire, même bois étalé chaque jour", qd),
+                                       ("o", "Inventaire, optimum a posteriori", op),
+                                       ("lo", f"Sensibilité : stock bas ({sb[0]['stock_initial']:.0f}), règle révisée", sb),
+                                       ("hi", f"Sensibilité : stock haut ({sh[0]['stock_initial']:.0f}), règle révisée", sh))) + "</table>"
+             "<div class='info'><b>Lecture honnête</b><ul>"
+             "<li><b>Le stock n'est plus la contrainte.</b> Avec ≈ " + str(NB) + " bûches, tous les événements sont couverts dans les trois météos, même dans le scénario bas. "
+             f"L'ancienne règle, conçue pour {H['stock_ancien']} bûches, laisserait {mm(sar, 'reste')} bûches inutilisées au 31 mars.</li>"
+             f"<li><b>Règles 3 et 4 assouplies</b> : seuil des jours cœur relevé de {nb(RA['seuil'])} °C à {nb(H['regle_seuil_coeur'])} °C ; plafond par jour sans événement de {RA['max']} à {H['regle_max_coeur']} bûches "
+             "(toujours sous le plafond d'absorption de 0,45 bûche par degré-jour et sous le maximum observé de 15) ; libération du surplus avancée du 1er février au 1er janvier.</li>"
+             "<li><b>Règles 1, 2, 5 et 6 inchangées</b> : événements toujours, réserve de " + str(H["regle_buches_evt"]) + " bûches par événement encore attendu, freinage si le stock passe sous le plan, jours témoins.</li>"
+             f"<li><b>Le ciblage compte moins qu'avant.</b> Étaler le même bois chaque jour donnerait une valeur semblable ({mm(qd, 'valeur', argent)}) : dans le modèle, une bûche vaut la même chose chaque jour "
+             "hors événement, et le stock suffit maintenant pour couvrir les événements de toute façon. Le protocole garde son utilité : ne jamais rater un événement (5 fois plus payant), "
+             "et ne pas s'épuiser trop tôt si l'inventaire est surestimé.</li>"
+             "<li><b>Le bois qui reste au 31 mars n'est pas perdu</b> : il sert l'hiver suivant (au même prix de kWh, ou plus cher si les tarifs montent). Brûler plus tôt ou plus tard est presque indifférent ; "
+             "l'important est de ne pas manquer de bois les jours d'événement.</li></ul></div>")
+    h.append("<h2 id='regles'>La règle de budget (révisée le 22 nov. 2026)</h2><ol>"
              f"<li><b>Événement annoncé (avis la veille avant 15 h) : toujours.</b> Allumer 30 à 60 min avant 6 h ou 16 h et entretenir jusqu'à 10 h ou 20 h : "
              f"<b>{bpe[0]} bûches</b> par événement (5 sous −12 °C), le double si matin et soir. On peut puiser dans la réserve.</li>"
              f"<li><b>Réserve pour les événements</b> : garder {H['regle_buches_evt']} bûches par événement encore attendu "
              f"(≈ {H['evts_attendus']} par hiver, surtout en janvier). En pratique : ≈ {res_j['1er déc.']} bûches au 1er déc., ≈ {res_j['1er janv.']} au 1er janv., "
-             f"≈ {res_j['1er févr.']} au 1er févr., ≈ {res_j['1er mars']} au 1er mars.</li>"
-             f"<li><b>Jour cœur d'un creux froid</b> (prévision : T moyenne ≤ {nb(H['regle_seuil_coeur'])} °C et nettement sous la normale) : feu de soirée, jusqu'à <b>{H['regle_max_coeur']} bûches</b>, "
-             "seulement si le stock après le feu reste au-dessus de la réserve.</li>"
-             f"<li><b>À partir du 1er février</b> : le surplus au-dessus de la réserve peut aller à tout jour froid (≤ 0 °C), toujours {H['regle_max_coeur']} bûches au plus ; "
-             "le stock qui reste en avril n'est pas perdu (il sert l'hiver suivant).</li>"
+             f"≈ {res_j['1er févr.']} au 1er févr., ≈ {res_j['1er mars']} au 1er mars. Avec l'inventaire, c'est moins d'un sixième du stock.</li>"
+             f"<li><b>Jour cœur d'un creux froid</b> (prévision : T moyenne ≤ {nb(H['regle_seuil_coeur'])} °C et nettement sous la normale) : feu, jusqu'à <b>{H['regle_max_coeur']} bûches</b> "
+             f"(au plus 0,45 bûche par degré-jour), si le stock après le feu reste au-dessus de la réserve. <span class='petit'>Avant le 22 nov. : ≤ {nb(RA['seuil'])} °C et {RA['max']} bûches.</span></li>"
+             f"<li><b>À partir du 1er janvier</b> : le surplus au-dessus de la réserve peut aller à tout jour froid (≤ 0 °C), {H['regle_max_coeur']} bûches au plus. "
+             "<span class='petit'>Avant : à partir du 1er février.</span> Le stock qui reste en avril n'est pas perdu (il sert l'hiver suivant).</li>"
              "<li><b>Si le stock baisse plus vite que prévu</b> (plus de 50 bûches sous le jalon du mois, ou recomptage plus bas) : suspendre les feux de jours cœur, "
-             "ne garder que les événements jusqu'à revenir sur la courbe. S'il baisse moins vite (hiver doux), ne pas « rattraper » avant février.</li>"
+             "ne garder que les événements jusqu'à revenir sur la courbe.</li>"
              "<li><b>Jour témoin</b> : environ un jour froid par mois sans feu (et sans événement), noté « témoin ».</li>"
              "<li><b>Saisie</b> chaque jour, même sans feu, dans <code>data/saisie_2026-2027.csv</code> ; la page Saisie suit le stock restant contre le plan.</li></ol>"
              "<table><tr><th>Jalon</th><th>Stock prévu (3 météos)</th><th>Réserve événements</th></tr>" +
              "".join(f"<tr><td>{lib}</td><td class=n>{' / '.join(str(x) for x in stk_j[lib])}</td><td class=n>{res_j[lib]}</td></tr>" for lib, _ in jalons) + "</table>"
              "<p class='petit'>Rythme médian simulé : nov. " + nb(rythme["11"]) + " · déc. " + nb(rythme["12"]) + " · janv. " + nb(rythme["01"]) + " · févr. " + nb(rythme["02"]) + " · mars " + nb(rythme["03"]) +
-             " bûches (février reçoit le surplus libéré). Ordre des météos : 2023-24 / 2024-25 / 2025-26.</p>")
+             " bûches. Ordre des météos : 2023-24 / 2024-25 / 2025-26.</p>")
     h.append("<h2 id='appoint'>Un achat d'appoint vaut-il la peine ?</h2>"
-             f"<p>Une corde de plus (≈ {H['buches_par_corde']} bûches) ajoute ≈ <b>{argent(min(marg), 0)}</b> de valeur évitée même placée au mieux "
-             f"({' / '.join(argent(x, 0) for x in marg_r)} avec la règle selon la météo), pour un coût ≈ {argent(H['prix_corde_remplacement'], 0)}. "
-             "Le stock actuel couvre déjà tous les événements : chaque bûche de plus irait à un jour ordinaire, à "
-             f"{argent(V['flex_hors_evt'])} pièce, sous son coût de remplacement (≈ {argent(H['prix_corde_remplacement'] / H['buches_par_corde'])}). "
-             "<b>Pas rentable</b>, sauf si le recomptage montre nettement moins de bûches (moins de ≈ 150 : la réserve d'événements serait menacée) "
-             "ou si le prix de la corde baisse sous ≈ 110 $.</p>")
+             f"<p><b>Non.</b> Une corde de plus (≈ {H['buches_par_corde']} bûches, ≈ {argent(H['prix_corde_remplacement'], 0)}) ajouterait {' / '.join(argent(x, 0) for x in marg_r)} de valeur avec la règle "
+             f"(selon la météo) et au mieux {argent(min(marg), 0)} à {argent(max(marg), 0)} en connaissant tout l'hiver d'avance. Le stock couvre déjà tous les événements ; chaque bûche de plus irait à un jour ordinaire, "
+             f"à {argent(V['flex_hors_evt'])} pièce, sous son coût de remplacement (≈ {argent(H['prix_corde_remplacement'] / H['buches_par_corde'])}). "
+             "Même dans le scénario bas de l'inventaire, la réserve d'événements n'est pas menacée. À revoir seulement si un recomptage donne moins de ≈ 300 bûches "
+             "(par exemple si une partie de la pile est plus creuse que prévu).</p>")
     h.append("<h2>Sources</h2><ul>" + "".join(f"<li><a href='{u}'>{E(t)}</a></li>" for t, u in SOURCES) +
              "</ul><p class='petit'>Consultées le 22 novembre 2026. Les données ouvertes d'Hydro-Québec sont « brutes, sans garantie » ; l'avis officiel par courriel a priorité.</p>")
     pg("protocole.html", "Protocole hiver 2026-2027 : positionnement", "".join(h))
@@ -366,3 +396,154 @@ def main(quand):
          "<p class='petit'>La projection est la simulation ciblée (météo " + CENTRAL + "). Les kWh attendus utilisent la météo réelle du jour et tes bûches. "
          "La valeur « réel » ne compte pas encore la prime d'événement (il faut les kWh horaires ; voir Propositions).</p>"]
     pg("protocole-saisie.html", "Saisie 2026-2027 et suivi réel vs projection", "".join(h))
+    page_inventaire(quand, P)
+
+
+def schema_svg(sections):
+    """Schéma simple des formes de face (échelle : 1 pi = 24 px)."""
+    k, m = 24, 20
+    rect, pente, tri = sections[0], sections[1], sections[2]
+    W = m + pente["largeur_pi"] * k + rect["largeur_pi"] * k + m + 40 + 2 * (tri["largeur_pi"] * k + 24) + m
+    Hs = m + max(rect["hauteur_pi"], pente["hauteur_pi"]) * k + 70
+    sol = m + max(rect["hauteur_pi"], pente["hauteur_pi"]) * k
+    x0 = m
+    o = [f"<svg class='graphe' viewBox='0 0 {W:.0f} {Hs:.0f}' role='img' aria-label='Schéma de la pile vue de face'>",
+         f"<line x1='0' y1='{sol}' x2='{W:.0f}' y2='{sol}' stroke='#555' stroke-width='1.5'/>"]
+    # pente (triangle rectangle : bas à gauche, haut contre le rectangle)
+    pw, ph = pente["largeur_pi"] * k, pente["hauteur_pi"] * k
+    o.append(f"<polygon points='{x0},{sol} {x0 + pw},{sol} {x0 + pw},{sol - ph}' fill='#ffcc80' stroke='#e65100'/>")
+    o.append(f"<text x='{x0 + pw * 0.62:.0f}' y='{sol - 8}' font-size='12' text-anchor='middle'>{pente['buches']}</text>")
+    o.append(f"<text x='{x0 + pw / 2:.0f}' y='{sol + 16}' font-size='11' text-anchor='middle'>4 pi</text>")
+    o.append(f"<text x='{x0 + pw * 0.35:.0f}' y='{sol - ph * 0.55:.0f}' font-size='11' text-anchor='middle' fill='#e65100'>45°</text>")
+    # rectangle
+    rx, rw, rh = x0 + pw, rect["largeur_pi"] * k, rect["hauteur_pi"] * k
+    o.append(f"<rect x='{rx}' y='{sol - rh}' width='{rw}' height='{rh}' fill='#ffb74d' stroke='#e65100'/>")
+    o.append(f"<text x='{rx + rw / 2:.0f}' y='{sol - rh / 2 + 5:.0f}' font-size='15' font-weight='700' text-anchor='middle'>Rectangle principal : {rect['buches']} bûches</text>")
+    o.append(f"<text x='{rx + rw / 2:.0f}' y='{sol + 16}' font-size='11' text-anchor='middle'>22 pi</text>")
+    o.append(f"<text x='{rx + rw + 6:.0f}' y='{sol - rh / 2:.0f}' font-size='11'>4 pi 8 po</text>")
+    # deux triangles isocèles
+    tx = rx + rw + 70
+    for i in range(tri["nombre"]):
+        bw, bh = tri["largeur_pi"] * k, tri["hauteur_pi"] * k
+        o.append(f"<polygon points='{tx},{sol} {tx + bw},{sol} {tx + bw / 2},{sol - bh}' fill='#ffe0b2' stroke='#e65100'/>")
+        o.append(f"<text x='{tx + bw / 2:.0f}' y='{sol - 10}' font-size='12' text-anchor='middle'>{round(tri['buches'] / tri['nombre'])}</text>")
+        o.append(f"<text x='{tx + bw / 2:.0f}' y='{sol + 16}' font-size='11' text-anchor='middle'>6 pi</text>")
+        o.append(f"<text x='{tx + bw / 2:.0f}' y='{sol - bh - 5:.0f}' font-size='11' text-anchor='middle'>3 pi 4 po</text>")
+        tx += bw + 24
+    o.append(f"<text x='{m}' y='{Hs - 14:.0f}' font-size='11' fill='#555'>Vue de face, à l'échelle (1 pi = {k} px). Profondeur : une seule rangée de bûches de 16 po présumée. "
+             "Triangles à 45° ; leur position est schématique.</text>")
+    o.append("</svg>")
+    return "".join(o)
+
+
+def texte_inventaire(I, NB_ancien):
+    p = I["param"]; S = I["sections"]
+    f = lambda x, d=2: f"{x:,.{d}f}".replace(",", " ").replace(".", ",")
+    L = ["# Inventaire de la pile de bois : estimation du 22 novembre 2026", "",
+         "Source : mesures prises par Marc, son croquis (approximatif ; formes du bas = triangles à 45°) et sa séance de calcul (22 nov. 2026). Rédigé par le projet bois-chauffage.", "",
+         "Croquis : rectangle de 22 pi (repères 12 pi + 10 pi), hauteur moyenne 4 pi 8 po, corde d'étalonnage à peu près au milieu ; à gauche 4 pi en pente à 45° ; en bas « x2 » : 6 pi de base, 3 pi 4 po au sommet.", "",
+         "## Résultat", "",
+         f"- Estimation centrale : **{I['buches']} bûches** (calcul exact {f(I['buches_exact'], 1)} ; la session arrondit à 875-880).",
+         f"- Surface de face totale : {f(I['surface'])} pi².",
+         f"- Fourchette retenue : {p['fourchette_retenue'][0]} à {p['fourchette_retenue'][1]} bûches. À CONFIRMER par Marc (nombre de rangées en profondeur ; densité tirée d'un seul échantillon).",
+         f"- En cordes : {f(I['cordes_face'], 1)} cordes de face (4 × 8 pi = 32 pi², bûches de 16 po) ; {f(I['cordes_232'], 1)} cordes au ratio du projet ({p['buches_par_corde']} bûches/corde).",
+         f"- Remplace la 1re estimation du même jour : environ 1,5 corde, soit {NB_ancien} bûches.", "",
+         "## Méthode", "",
+         f"On mesure la face de la pile (largeur × hauteur), on la découpe en formes simples, puis on multiplie la surface par une densité de {f(p['densite'], 1)} bûches par pi² de face.",
+         "La densité vient d'une corde d'étalonnage située à peu près au milieu du rectangle principal (croquis de Marc) : un seul échantillon, À CONFIRMER par d'autres comptages.", "",
+         "## Détail des calculs", ""]
+    for i, s in enumerate(S, 1):
+        if s["forme"] == "rectangle":
+            calc = f"{f(s['largeur_pi'], 0)} pi × {f(s['hauteur_pi'])} pi = {f(s['surface'])} pi²"
+        else:
+            calc = f"{f(s['largeur_pi'], 0)} pi × {f(s['hauteur_pi'])} pi ÷ 2 = {f(s['surface_unitaire'])} pi²" + (f" ; × {s['nombre']} = {f(s['surface'])} pi²" if s["nombre"] > 1 else "")
+        L += [f"{i}. {s['section']} ({s['nombre']} × {s['forme']})", f"   - Hypothèse : {s['hypothese_forme']}.", f"   - Surface : {calc}.",
+              f"   - Bûches : {f(s['surface'])} × {f(p['densite'], 1)} = {f(s['surface'] * p['densite'], 1)}, soit {s['buches']}.", ""]
+    L += ["| Section | Surface (pi²) | Bûches |", "|---|---:|---:|"] + [f"| {s['section']} | {f(s['surface'])} | {s['buches']} |" for s in S] + \
+         [f"| **Total** | **{f(I['surface'])}** | **{I['buches']}** |", "",
+          f"Note : dans la session, un tableau intermédiaire affichait {f(I['intermediaire_surface'])} pi² et {I['intermediaire_buches']} bûches : c'était le total avant l'ajout des deux triangles.", "",
+          "## Vérification de plausibilité (corde québécoise)", "",
+          f"- Une corde de face (corde québécoise) mesure 4 pi × 8 pi de face = 32 pi², avec des bûches de 16 po (longueur CONFIRMÉE par Marc). C'est 1/3 d'une corde pleine (4 × 4 × 8 = 128 pi³).",
+          f"- {f(I['surface'])} pi² ÷ 32 = {f(I['cordes_face'], 2)} cordes de face.",
+          f"- {f(p['densite'], 1)} bûches/pi² × 32 = {f(I['buches_par_corde_implicite'], 0)} bûches par corde, contre {p['buches_par_corde']} dans le projet (2023-24).",
+          f"- À {p['buches_par_corde']} bûches/corde : {p['buches_par_corde']} ÷ 32 = {f(I['densite_232'])} bûches/pi², soit {I['buches_selon_232']} bûches.",
+          f"- Diamètre implicite : 144 po² ÷ {f(p['densite'], 1)} = {f(I['po2_par_buche'], 1)} po² de face par bûche, vides compris, soit un carré de ≈ {f(I['cote_po'], 1)} po de côté : plausible pour des bûches fendues.",
+          "- Point à vérifier : 4,1 cordes, c'est presque l'achat complet de 2023-24 (4 cordes), alors qu'on supposait qu'il en restait environ 1,5.", "",
+          "## Limites et incertitudes", "",
+          "- Profondeur : aucune mesure. On présume UNE seule rangée de bûches de 16 po vue de face. Avec deux rangées, le total doublerait. À CONFIRMER.",
+          "- Longueur des bûches : 16 po, confirmée par Marc le 22 nov. 2026.",
+          "- Densité tirée d'un seul échantillon (corde d'étalonnage au milieu du rectangle) ; diamètre des bûches variable ; tassement et vides (bûches croisées aux extrémités, trous).",
+          "- Formes simplifiées (croquis approximatif) : pente du début à 45° ; formes du bas = triangles à 45° (confirmé par Marc) ; la hauteur mesurée (3 pi 4 po) a été retenue, alors que des côtés à 45° exacts donneraient 3 pi "
+          f"({I['triangle_45_buches']} bûches au lieu de {S[2]['buches']}).", "",
+          "## Fourchettes", "",
+          f"- Fourchette retenue (sensibilité à la densité) : 6,7 bûches/pi² → {I['buches']} ; 7,25 (ratio du projet, 232/corde) → {I['buches_selon_232']}.",
+          f"- Tests plus larges (non retenus) : 6,0 → {I['buches_bas']} ; 7,4 → {I['buches_haut']} ; ±15 % → {I['moins15']} à {I['plus15']}.",
+          f"- Fourchette retenue pour le protocole : {p['fourchette_retenue'][0]} à {p['fourchette_retenue'][1]} (central {I['buches']}), à confirmer.", ""]
+    return "\n".join(L)
+
+
+def page_inventaire(quand, P):
+    import inventaire
+    I = inventaire.calculer(); p = I["param"]; S = I["sections"]; H = P["hypotheses"]
+    sous = f"<p class='sous'>Mesures de Marc du {dfr(p['date'])} 2026 · généré le {E(quand)} par <code>outils/generer_site.py</code> à partir de <code>data/inventaire_pile_2026-11.csv</code>.</p>"
+    md = texte_inventaire(I, H["stock_ancien"])
+    with open(os.path.join(OUT, "inventaire-pile-2026-11.md"), "w", encoding="utf-8") as fo:
+        fo.write(md)
+    f2 = lambda x: nb(x, 2)
+    det = []
+    for s in S:
+        if s["forme"] == "rectangle":
+            c = f"{nb(s['largeur_pi'])} × {f2(s['hauteur_pi'])} = {f2(s['surface'])} pi²"
+        else:
+            c = f"{nb(s['largeur_pi'])} × {f2(s['hauteur_pi'])} ÷ 2 = {f2(s['surface_unitaire'])} pi²" + (f" ; × {s['nombre']} = {f2(s['surface'])} pi²" if s["nombre"] > 1 else "")
+        det.append(f"<tr><td><b>{E(s['section'])}</b></td><td>{E(s['hypothese_forme'])}</td><td>{c}</td><td class=n>{f2(s['surface'])} × {nb(p['densite'], 1)} = {nb(s['surface'] * p['densite'], 1)}</td><td class=n><b>{s['buches']}</b></td></tr>")
+    sens = [("6,0 (test large, non retenu)", 6.0, I["buches_bas"]), ("<b>6,7 (étalonnage de Marc) : central</b>", 6.7, I["buches"]), ("<b>7,25 (232 bûches/corde du projet) : haut de fourchette</b>", 7.25, I["buches_selon_232"]), ("7,4 (test large, non retenu)", 7.4, I["buches_haut"])]
+    h = ["<div class='alerte'><b>Estimation à confirmer par Marc</b> : nombre de rangées en profondeur (une seule présumée) ; densité de 6,7 bûches/pi² tirée d'une seule corde d'étalonnage. "
+         "Longueur des bûches : <b>16 po, confirmée</b> par Marc le 22 nov. 2026.</div>",
+         "<div class='cartes'>", carte(f"≈ {I['buches']}", "bûches (central)", "prov", sous=f"fourchette {p['fourchette_retenue'][0]}–{p['fourchette_retenue'][1]}"),
+         carte(f"{f2(I['surface'])} pi²", "surface de face", "neutre", sous="3 formes, 4 morceaux"),
+         carte(nb(I["cordes_face"], 1), "cordes de face (4 × 8 pi)", "neutre", sous=f"{nb(I['cordes_232'], 1)} cordes à {p['buches_par_corde']} bûches/corde"),
+         carte(f"{H['stock_ancien']} → {I['buches']}", "stock de départ du protocole", "ko", "protocole.html#revision", "révision du 22 nov. 2026"),
+         carte(nb(p["densite"], 1), "bûches par pi² de face", "prov", sous="1 corde d'étalonnage, au milieu du rectangle"), "</div>",
+         "<h2>Croquis de Marc</h2>" + ("<figure><img src='img/croquis-pile.png' alt='Croquis de la pile par Marc' style='max-width:100%;border:1px solid #ddd;border-radius:6px'>"
+          "<figcaption class='petit'>Croquis approximatif ; formes du bas = triangles à 45° (confirmé par Marc). Rectangle de 22 pi (repères 12 pi + 10 pi), hauteur moyenne 4 pi 8 po ; "
+          "corde d'étalonnage à peu près au milieu ; à gauche, 4 pi en pente à 45° ; en bas, « x2 » : 6 pi de base, 3 pi 4 po au sommet.</figcaption></figure>"
+          if os.path.exists(os.path.join(OUT, "img", "croquis-pile.png")) else "<div class='alerte'>Croquis de Marc à ajouter : <code>rapports/img/croquis-pile.png</code> (croquis approximatif ; formes du bas = triangles à 45°).</div>"),
+         "<h2>Schéma de la pile (vue de face, à l'échelle)</h2>", schema_svg(S),
+         "<h2>Méthode</h2><p>On mesure la <b>face</b> de la pile (largeur × hauteur), on la découpe en formes simples (un rectangle, un triangle en pente, deux triangles isocèles), "
+         f"puis on multiplie chaque surface par une <b>densité de face</b> de {nb(p['densite'], 1)} bûches par pi², étalonnée sur une corde de bois située à peu près au milieu du rectangle principal (croquis de Marc, séance de calcul). "
+         "On présume une seule rangée de bûches vue de face.</p>",
+         "<h2>Mesures, hypothèses et calculs</h2><table><tr><th>Section</th><th>Mesures et hypothèse de forme</th><th>Surface</th><th>× densité</th><th>Bûches</th></tr>" + "".join(det) +
+         f"<tr class=tot><td>Total</td><td></td><td class=n><b>{f2(I['surface'])} pi²</b></td><td class=n>{nb(I['buches_exact'], 1)}</td><td class=n><b>{I['buches']}</b></td></tr></table>"
+         f"<p class='petit'>Le total {I['buches']} est la somme des sections arrondies, comme dans la session ; le calcul exact donne {nb(I['buches_exact'], 1)} (la session dit « 875 à 880 »). "
+         f"Dans la session, un tableau intermédiaire affichait {f2(I['intermediaire_surface'])} pi² et {I['intermediaire_buches']} bûches : c'était le total <i>avant</i> l'ajout des deux triangles ; le total final est {f2(I['surface'])} pi². "
+         f"Formes du bas : triangles à 45° (confirmé par Marc ; le croquis est approximatif). Avec des côtés à 45° exacts, une base de 6 pi donnerait 3 pi de haut ({I['triangle_45_buches']} bûches pour les deux au lieu de {S[2]['buches']}) ; c'est la hauteur mesurée, 3 pi 4 po, qui a été retenue. "
+         "Pente du début : 45°, à la même hauteur que le rectangle sur le croquis ; on garde le triangle de 4 × 4 ÷ 2 = 8 pi² de la session (hypothèse prudente).</p>",
+         "<h2 id='plausibilite'>Vérification de plausibilité (corde québécoise)</h2><table><tr><th>Contrôle</th><th>Calcul</th><th>Résultat</th></tr>"
+         f"<tr><td>Corde de face (corde québécoise)</td><td>4 pi × 8 pi de face, bûches de 16 po ; 1/3 de la corde pleine (4 × 4 × 8 = {nb(p['corde_pleine_pi3'])} pi³)</td><td class=n>{nb(p['corde_face_pi2'])} pi² de face</td></tr>"
+         f"<tr><td>Cordes dans la pile</td><td>{f2(I['surface'])} ÷ {nb(p['corde_face_pi2'])}</td><td class=n><b>{f2(I['cordes_face'])} cordes</b></td></tr>"
+         f"<tr><td>Bûches par corde implicites</td><td>{nb(p['densite'], 1)} × {nb(p['corde_face_pi2'])}</td><td class=n>{nb(I['buches_par_corde_implicite'])} (projet : {p['buches_par_corde']})</td></tr>"
+         f"<tr><td>Densité qui correspond à {p['buches_par_corde']} bûches/corde</td><td>{p['buches_par_corde']} ÷ {nb(p['corde_face_pi2'])}</td><td class=n>{f2(I['densite_232'])} bûches/pi² → {I['buches_selon_232']} bûches</td></tr>"
+         f"<tr><td>Diamètre implicite d'une bûche</td><td>144 po² ÷ {nb(p['densite'], 1)} = {nb(I['po2_par_buche'], 1)} po² de face par bûche, vides compris</td><td class=n>≈ {nb(I['cote_po'], 1)} po (carré équivalent)</td></tr>"
+         f"<tr><td>Volume apparent</td><td>{f2(I['surface'])} pi² × 16 po (1,33 pi)</td><td class=n>{nb(I['volume_pi3'])} pi³ ≈ {nb(I['volume_pi3'] / p['corde_pleine_pi3'], 2)} corde pleine</td></tr></table>"
+         "<div class='info'><b>Verdict</b> : les calculs sont cohérents avec la définition d'une corde québécoise. 6,7 bûches/pi² donne 214 bûches par corde, un peu sous les 232 du projet ; "
+         "un diamètre implicite d'environ 4,5 po (vides compris) est plausible pour des bûches fendues. L'hypothèse critique est <b>une seule rangée de bûches de 16 po</b> : "
+         "la longueur est confirmée, le nombre de rangées non (deux rangées doubleraient le total). "
+         "<b>Point à vérifier</b> : 4,1 cordes, c'est presque l'achat complet de 2023-24 (4 cordes), alors qu'on supposait qu'il en restait environ 1,5. "
+         "Soit il reste plus de bois qu'on pensait (achat plus gros, ou saisons plus légères), soit la pile est moins dense qu'en apparence.</div>",
+         "<h2 id='fourchette'>Fourchette</h2><table><tr><th>Densité (bûches/pi²)</th><th>Calcul</th><th>Bûches</th><th>Cordes (232)</th></tr>" +
+         "".join(f"<tr{' class=tot' if d == 6.7 else ''}><td>{lib}</td><td>{f2(I['surface'])} × {nb(d, 2)}</td><td class=n>{b}</td><td class=n>{nb(b / p['buches_par_corde'], 1)}</td></tr>" for lib, d, b in sens) +
+         f"<tr><td>±15 % autour du central</td><td>{I['buches']} × 0,85 / × 1,15</td><td class=n>{I['moins15']} à {I['plus15']}</td><td class=n>{nb(I['moins15'] / 232, 1)} à {nb(I['plus15'] / 232, 1)}</td></tr></table>"
+         f"<p><b>Retenu pour le protocole</b> : central <b>{I['buches']}</b>, fourchette <b>{p['fourchette_retenue'][0]} à {p['fourchette_retenue'][1]}</b> (densité de 6,7 à 7,25 bûches/pi² : de l'étalonnage de Marc à celle qui correspond aux 232 bûches/corde du projet), "
+         f"à confirmer. La simulation teste aussi {I['buches_bas']} et {I['buches_haut']} : tous les événements restent couverts (<a href='protocole.html#revision'>détail</a>).</p>",
+         "<h2>Limites</h2><ul>"
+         "<li><b>Profondeur</b> : aucune mesure. Une seule rangée de bûches de 16 po vue de face est présumée. <b>À confirmer.</b></li>"
+         "<li><b>Densité</b> : un seul échantillon (la corde d'étalonnage au milieu du rectangle) ; elle varie avec le diamètre des bûches et le soin de l'empilage d'un bout à l'autre de la pile.</li>"
+         "<li><b>Tassement et vides</b> : extrémités croisées, trous, bûches tordues ; la face ne montre pas l'intérieur.</li>"
+         "<li><b>Formes</b> (croquis approximatif) : pente du début à 45° ; formes du bas = triangles à 45° (confirmé par Marc), avec la hauteur mesurée (3 pi 4 po) plutôt que la géométrie à 45° exacts (3 pi).</li>"
+         "<li><b>Énergie</b> : le nombre de bûches ne dit pas les kWh ; le projet utilise ≈ " + nb(P["kwh_par_buche"], 1) + " kWh évités par bûche (régression 2023-24).</li></ul>",
+         "<h2>Pour affiner</h2><ol><li>Confirmer le nombre de rangées en profondeur.</li><li>Compter les bûches dans un carré de 2 pi × 2 pi à deux ou trois endroits de la face (densité réelle).</li>"
+         "<li>Inscrire tout vrai recomptage dans la colonne <code>stock_compte</code> de la saisie ; l'inventaire reste le paramètre de départ daté.</li></ol>",
+         "<h2>Fichiers</h2><ul><li>Texte téléchargeable : <a href='inventaire-pile-2026-11.md' download>inventaire-pile-2026-11.md</a> (document de calcul de l'inventaire).</li>"
+         "<li>Données : <code>data/inventaire_pile_2026-11.csv</code> (mesures en pouces) ; calcul : <code>outils/inventaire.py</code>.</li></ul>"]
+    page("inventaire.html", "Inventaire de la pile de bois (22 nov. 2026)", sousnav("inventaire.html") + "".join(h), quand, sous=sous)

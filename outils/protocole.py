@@ -6,7 +6,10 @@ data/saisie_2026-2027.csv ; écrit data/protocole.json, data/protocole_meteo_jou
 data/protocole_simulation.csv, data/saisie_2026-2027_enrichie.csv.
 Bibliothèque standard seulement.
 """
-import csv, json, os, math, statistics as st, datetime as dt
+import csv, json, os, sys, math, statistics as st, datetime as dt
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import inventaire
+INV = inventaire.calculer()
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 S = lambda *p: os.path.join(RACINE, "sources", *p)
@@ -31,14 +34,17 @@ H = {
     "seuil_creux": -2.0,                # anomalie (°C) sous la médiane mobile 31 j pour former un creux
     "seuil_coeur": -3.0,                # jour « cœur » : T moy ≤ médiane mobile − 3 °C
     "seuil_evt_predit": -12.0,          # hiver sans données HQ : jour d'événement probable si T moy ≤ −12 °C
-    # --- stock 2026-2027 (Marc, 2026-11-22 12 h 51) ---
-    "cordes_restantes": 1.5,            # estimation de Marc
+    # --- stock 2026-2027 : inventaire mesuré de la pile (révision du 2026-11-22, voir outils/inventaire.py) ---
+    "stock_source": "inventaire de la pile du 2026-11-22 (mesures de Marc × 6,7 bûches/pi²)",
+    "stock_ancien": 348,                # 1re estimation (2026-11-22 12 h 51) : ≈ 1,5 corde × 232 — remplacée
+    "cordes_restantes_ancien": 1.5,
     "buches_par_corde": 232,            # dérivé : 928 bûches projetées / 4 cordes (2023-24) — fragile
     "prix_corde_remplacement": 131.25,  # 425 $ / 4 + 25 $
     "regle_buches_evt": 5,              # bûches réservées par événement attendu
-    "regle_seuil_coeur": -8.0,          # feu un jour cœur seulement si T moy prévue ≤ −8 °C
-    "regle_max_coeur": 10,              # au plus 10 bûches un jour cœur sans événement
-    "regle_liberation": "02-01",        # à partir du 1er févr. : le surplus au-dessus de la réserve va à tout jour ≤ 0 °C
+    "regle_seuil_coeur": -5.0,          # révisé 2026-11-22 (stock 876) : feu un jour cœur si T moy prévue ≤ −5 °C (avant : −8 °C)
+    "regle_max_coeur": 12,              # révisé : au plus 12 bûches un jour sans événement (avant : 10 ; plafond d'absorption 0,45 × DJ)
+    "regle_liberation": "01-01",        # révisé : dès le 1er janv. (avant : 1er févr.) le surplus au-dessus de la réserve va à tout jour ≤ 0 °C
+    "regle_ancienne": {"seuil": -8.0, "max": 10, "liberation": "02-01"},
     "evts_attendus": 23,                # moyenne Flex D 2024-25 (26) et 2025-26 (19)
 }
 HIVERS = {"2023-2024": 2023, "2024-2025": 2024, "2025-2026": 2025, "2026-2027": 2026}
@@ -265,7 +271,7 @@ def analyser(ecrire=True):
         resume[nom] = {"dj_saison": round(sdj), "strategies": strat, "evts_reels": reel}
 
     # ---------- stock limité 2026-2027 ----------
-    stock0 = round(H["cordes_restantes"] * H["buches_par_corde"])
+    stock0 = INV["buches"]
     # part cumulée des événements après chaque jour de saison (2024-25 et 2025-26)
     evs = sorted(jour_saison(j["date"]) for j in jours if j["hiver"] in ("2024-2025", "2025-2026") for _ in range(j["evt"]))
     def part_apres(i):
@@ -288,19 +294,20 @@ def analyser(ecrire=True):
             k = j["date"].strftime("%m"); tot["par_mois"][k] = tot["par_mois"].get(k, 0) + b
         tot["valeur"] = tot["base"] + tot["prime"]
         return tot
-    def regle(js, stock):
+    def regle(js, stock, rp=None):
+        rp = rp or {"seuil": H["regle_seuil_coeur"], "max": H["regle_max_coeur"], "liberation": H["regle_liberation"]}
         plan, st_, courbe = {}, stock, []
         for j in js:
             reserve = H["regle_buches_evt"] * H["evts_attendus"] * part_apres(jour_saison(j["date"]))
             n = 0
             if j["nevt"]:
                 n = min(n_evt_jour(j), st_)
-            elif j.get("coeur") and j["t"] <= H["regle_seuil_coeur"] and dans(j, crit_deb, crit_fin):
-                v = min(plafond(j["dj"]), H["regle_max_coeur"])
+            elif j.get("coeur") and j["t"] <= rp["seuil"] and dans(j, crit_deb, crit_fin):
+                v = min(plafond(j["dj"]), rp["max"])
                 if st_ - v >= reserve:
                     n = v
-            elif j["date"].strftime("%m-%d") >= H["regle_liberation"] and j["date"].month <= 3 and j["t"] <= 0:
-                v = min(plafond(j["dj"]), H["regle_max_coeur"])
+            elif j["date"].strftime("%m-%d") >= rp["liberation"] and j["date"].month <= 3 and j["t"] <= 0:
+                v = min(plafond(j["dj"]), rp["max"])
                 if st_ - v >= reserve:
                     n = v
             plan[j["date"]] = n; st_ -= n
@@ -323,7 +330,8 @@ def analyser(ecrire=True):
         y = HIVERS[nom]
         js = [j for j in jours if j["hiver"] == nom and dt.date(y, 11, 7) <= j["date"] <= dt.date(y + 1, 3, 31)]
         r = {}
-        for lab, B in (("stock", stock0), ("stock_plus_corde", stock0 + H["buches_par_corde"])):
+        for lab, B in (("stock", stock0), ("stock_plus_corde", stock0 + H["buches_par_corde"]), ("stock_bas", INV["buches_bas"]), ("stock_haut", INV["buches_haut"]),
+                       ("stock_ancien", H["stock_ancien"])):
             pr, cr = regle(js, B)
             for nomS, plan in (("regle", pr), ("optimal", optimal(js, B)), ("quotidien", quotidien(js, B))):
                 t = evaluer(js, plan); t["reste"] = B - t["buches"]; t["stock_initial"] = B
@@ -342,8 +350,14 @@ def analyser(ecrire=True):
                                        "kwh_evites": round(kwh, 1), "kwh_evites_pointe": round(dans_f, 2), "kwh_sans_feu": round(c0 + cdj * j["dj"], 1),
                                        "kwh_avec_feu": round(c0 + cdj * j["dj"] - kwh, 1), "valeur_base": round(kwh * F["p2_hiver"] * tx, 2),
                                        "valeur_pointe": round(dans_f * (F["pointe"] - F["p2_hiver"]) * tx, 2)})
+        # comparaison : ancienne règle (−8 °C, 10 bûches, 1er févr.) avec l'ancien stock (348) et avec l'inventaire
+        for lab, B in (("ancien_ancienne_regle", H["stock_ancien"]), ("stock_ancienne_regle", stock0)):
+            pr, _ = regle(js, B, H["regle_ancienne"])
+            t = evaluer(js, pr); t["reste"] = B - t["buches"]; t["stock_initial"] = B
+            r[lab] = {k: (round(v, 2) if not isinstance(v, dict) else {kk: round(vv) for kk, vv in v.items()}) for k, v in t.items()}
         stock_res[nom] = r
-    stock = {"buches": stock0, "valeur_remplacement": H["cordes_restantes"] * H["prix_corde_remplacement"], "resultats": stock_res,
+    stock = {"buches": stock0, "cordes": stock0 / H["buches_par_corde"], "valeur_remplacement": stock0 / H["buches_par_corde"] * H["prix_corde_remplacement"],
+             "inventaire": {k: v for k, v in INV.items() if k != "sections"}, "resultats": stock_res,
              "courbes": courbes_stock, "evts_par_mois_moyen": mois_evt,
              "buches_par_evt_typ": [n_evt_jour({"nevt": 1, "dj": dj}) for dj in (24, 28, 32, 36)]}
 
@@ -389,7 +403,7 @@ def analyser(ecrire=True):
             csv.writer(fo).writerow(["date", "buches", "kwh", "evenement_hq", "jour_temoin", "stock_compte", "remarque"])
     # stock restant réel : stock initial − bûches cumulées ; « stock_compte » (recomptage) remplace le calcul ce jour-là
     saisie.sort(key=lambda r: r["date"])
-    stk = round(H["cordes_restantes"] * H["buches_par_corde"])
+    stk = INV["buches"]  # stock de départ = inventaire mesuré (paramètre daté), pas une ligne de saisie
     for r in saisie:
         if r["stock_compte"]:
             stk = float(r["stock_compte"])

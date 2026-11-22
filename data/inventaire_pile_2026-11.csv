@@ -1,0 +1,4 @@
+section,forme,largeur_po,hauteur_po,nombre,hypothese_forme,source
+Rectangle principal,rectangle,264,56,1,"section à peu près uniforme, 22 pi (repères 12 pi + 10 pi) × 4 pi 8 po de hauteur moyenne ; l'étalonnage de 6,7 bûches/pi² vient d'une corde située à peu près au milieu","séance de calcul de Marc, 2026-11-22"
+Partie en pente au début,triangle,48,48,1,"à gauche, 4 pi de large en pente à 45° ; le croquis la montre à la même hauteur (4 pi 8 po) ; on garde le triangle de 4 × 4 ÷ 2 = 8 pi² de la session","séance de calcul de Marc, 2026-11-22"
+Structures triangulaires,triangle,72,40,2,"« x2 » sur le croquis : triangles à 45° (confirmé par Marc ; le croquis est approximatif) ; base 6 pi, sommet 3 pi 4 po mesuré et retenu (à 45° exacts, la hauteur serait 3 pi)","séance de calcul de Marc, 2026-11-22"

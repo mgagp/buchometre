@@ -67,7 +67,7 @@ code{background:#f4f4f4;padding:1px 4px;border-radius:3px}
 
 NAV = [("index.html", "Sommaire global"), ("mensuel.html", "Mensuel"), ("jours.html", "Jour par jour"),
        ("donnees.html", "Données brutes"), ("factures.html", "Factures Hydro"), ("qualite.html", "Qualité des données"),
-       ("methode.html", "Méthode"), ("decisions.html", "Propositions"), ("protocole.html", "▶ Protocole 2026-27")]
+       ("methode.html", "Méthode"), ("decisions.html", "Propositions"), ("inventaire.html", "Inventaire bois"), ("protocole.html", "▶ Protocole 2026-27")]
 
 
 def page(nom, titre, corps, quand, sous=None):
@@ -421,7 +421,10 @@ def main():
              "<h2 id='maj-2026'>Mise à jour du 22 novembre 2026</h2><ul>"
              "<li>Coût de référence du bois : 4 cordes × (106,25 $ + 25 $) = <b>525 $</b> tout inclus (hausse de 25 $ par corde indiquée par Marc ; 4 cordes = hypothèse).</li>"
              "<li>Marc est au tarif <b>Flex D</b> (confirmé le 22 nov. 2026, 12 h 51) : hors événement 9,103 ¢ en 2e tranche, 46,463 ¢ pendant les événements (tarifs au 1er avril 2026). Le crédit hivernal est écarté.</li>"
-             "<li>Pas d'achat de bois en 2026-27 : stock ≈ 1,5 corde ≈ 348 bûches (232 bûches/corde, ratio dérivé de 2023-24, fragile). Bois déjà payé : objectif = maximiser la valeur évitée avec ce stock (simulation jour par jour avec une règle de budget). Une corde de plus ajouterait ≈ 109 $ pour ≈ 131 $ : non rentable.</li>"
+             "<li>Pas d'achat de bois en 2026-27. <s>Stock ≈ 1,5 corde ≈ 348 bûches</s> (1re estimation, remplacée le même jour). Bois déjà payé : objectif = maximiser la valeur évitée avec ce stock (simulation jour par jour avec une règle de budget).</li>"
+             "<li><b>Révision du 22 nov. 2026 (inventaire mesuré)</b> : stock de départ = <a href='inventaire.html'>inventaire de la pile</a>, 130,67 pi² de face × 6,7 bûches/pi² ≈ <b>876 bûches</b> (≈ 3,8 cordes à 232 ; 4,1 cordes de face), "
+             "fourchette 876 à 947 (densité 6,7 à 7,25), à confirmer (rangées en profondeur). Paramètre daté dans <code>data/inventaire_pile_2026-11.csv</code> et <code>outils/inventaire.py</code>, pas une ligne de saisie. "
+             "Règles 3 et 4 assouplies (jours cœur ≤ −5 °C au lieu de −8 °C, 12 bûches au lieu de 10, surplus libéré au 1er janv. au lieu du 1er févr.). Une corde d'appoint reste non rentable.</li>"
              "<li>Une bûche vaut ≈ 0,47 $ hors événement (Flex D) contre ≈ 0,58 $ au tarif D 2026 ; seuil de rentabilité ≈ 1 115 bûches (Flex D hors événement) ou ≈ 911 (tarif D).</li>"
              "<li>Test ajouté : interaction bûches × degrés-jours non significative ; le gain par bûche reste constant dans le modèle.</li>"
              "<li>Suite : <a href='protocole.html'>Protocole hiver 2026-2027</a> (étude météo, simulation, saisie).</li></ul>")
@@ -431,12 +434,21 @@ def main():
     corps = ("<h2>Décidé le 22 novembre 2026</h2><ul>"
              "<li>425 $ = tout inclus ; repère de remplacement 131,25 $ la corde (425 $ ÷ 4 + 25 $). Météo : Vaudreuil-Dorion.</li>"
              "<li><b>Tarif Flex D confirmé</b> (activé récemment) ; l'option de crédit hivernal est écartée.</li>"
-             "<li><b>Pas d'achat de bois cet hiver</b> : stock ≈ 1,5 corde ≈ 348 bûches, déjà payé. Objectif : placer ce stock là où il évite le plus d'électricité "
+             "<li><b>Pas d'achat de bois cet hiver</b> : bois déjà payé. Objectif : placer ce stock là où il évite le plus d'électricité "
              "(événements de pointe d'abord, puis jours cœur des creux froids). Voir le <a href='protocole.html#regles'>protocole et sa règle de budget</a>.</li>"
+             "</ul><h2 id='revision-2026-11-22'>Révision du 22 novembre 2026 : inventaire mesuré de la pile</h2><ul>"
+             "<li><b>Avant</b> (22 nov., 12 h 51) : stock ≈ 1,5 corde × 232 = 348 bûches (fourchette 260 à 435), sans mesure. Simulation : ≈ 37 à 42 jours de feu, ≈ 183 $ à 305 $ évités, tous les événements couverts ; corde d'appoint ≈ +101 $ à +109 $ pour ≈ 131 $.</li>"
+             "<li><b>Après</b> : mesures de Marc (rectangle 22 pi × 4 pi 8 po, pente 4 pi à 45°, deux triangles 6 pi × 3 pi 4 po) et croquis : 130,67 pi² × 6,7 bûches/pi² = <b>876 bûches</b> "
+             "(fourchette 876 à 947 ; longueur 16 po confirmée ; une seule rangée présumée). Voir <a href='inventaire.html'>Inventaire de la pile</a>.</li>"
+             "<li><b>Règles changées</b> : règle 3 (jours cœur) ≤ −5 °C au lieu de ≤ −8 °C ; plafond par jour sans événement 12 bûches au lieu de 10 ; règle 4 (libération du surplus) au 1er janvier au lieu du 1er février. "
+             "Règles 1, 2, 5, 6 inchangées. Nouveaux résultats : <a href='protocole.html#revision'>protocole, section « Ce que change l'inventaire »</a>.</li>"
+             "<li><b>Constat</b> : le stock n'est plus la contrainte ; le ciblage sert surtout à ne jamais rater un événement. Achat d'appoint : toujours non rentable.</li>"
+             "<li><b>À vérifier</b> : 4,1 cordes, c'est presque l'achat de 2023-24 (4 cordes), alors qu'on croyait qu'il en restait ≈ 1,5.</li>"
              "<li>Format retenu : site statique régénéré par script ; saisie simplifiée dans <code>data/saisie_2026-2027.csv</code>, avec suivi du stock.</li></ul>"
              "<h2>À décider ou à faire</h2><ol>"
-             "<li><b>Compter le stock</b> (ou une rangée, puis extrapoler) et l'inscrire dans la colonne <code>stock_compte</code> : le ratio de 232 bûches par corde est fragile (±25 %).</li>"
-             "<li><b>Achat d'appoint</b> : non recommandé (≈ 109 $ de valeur pour ≈ 131 $ la corde) ; à revoir seulement si le recomptage donne moins de ≈ 150 bûches.</li>"
+             "<li><b>Confirmer l'inventaire</b> : nombre de rangées en profondeur (une seule présumée) ; idéalement, compter un carré de 2 × 2 pi à deux ou trois endroits pour vérifier la densité de 6,7 bûches/pi². "
+             "Un vrai recomptage ultérieur va dans la colonne <code>stock_compte</code>.</li>"
+             "<li><b>Achat d'appoint</b> : non recommandé (le stock couvre tous les événements ; une corde de plus irait à des jours ordinaires) ; à revoir seulement si un recomptage donne moins de ≈ 300 bûches.</li>"
              "<li><b>Mesure des événements</b> : télécharger les kWh <b>horaires</b> de l'Espace client les jours d'événement pour mesurer l'effet réel du feu dans la fenêtre 6-10 h / 16-20 h.</li>"
              "<li><b>Jours témoins</b> : un jour froid sans feu par mois environ.</li>"
              "<li><b>Données à ajouter</b> : poids moyen d'une bûche (peser 10 bûches), absences, export CSV quotidien de l'Espace client.</li></ol>"
