@@ -217,5 +217,24 @@ def main():
     print("contrôle facture :", controle); print("saison :", saison)
 
 
+def mettre_a_jour_sources():
+    """--maj : télécharge la météo Open-Meteo (1er juil. 2023 → aujourd'hui) et les événements de pointe HQ."""
+    import urllib.request
+    fin = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+    url = ("https://archive-api.open-meteo.com/v1/archive?latitude=45.40&longitude=-74.03&start_date=2023-07-01&end_date=" + fin +
+           "&daily=temperature_2m_mean,temperature_2m_min,temperature_2m_max,wind_speed_10m_max&timezone=America%2FToronto")
+    urllib.request.urlretrieve(url, S("meteo_open-meteo_vaudreuil_2023-2026.json"))
+    urllib.request.urlretrieve("https://donnees.hydroquebec.com/api/explore/v2.1/catalog/datasets/evenements-pointe/exports/csv?delimiter=%3B",
+                               S("hq_evenements_pointe.csv"))
+    print("Sources mises à jour : météo jusqu'au", fin, "+ événements de pointe Hydro-Québec")
+
+
 if __name__ == "__main__":
+    import sys
+    if "--maj" in sys.argv:
+        mettre_a_jour_sources()
     main()
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import protocole
+    o = protocole.analyser()
+    print(f"Protocole : {o['n_saisie']} jour(s) saisi(s) en 2026-2027 ; météo jusqu'au {o['meteo_derniere_date']}")

@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+"""Analyse du protocole hiver 2026-2027 (appelé par preparer_donnees.py, ou seul).
+
+Lit sources/meteo_open-meteo_vaudreuil_2023-2026.json, sources/hq_evenements_pointe.csv, data/modele.json,
+data/saisie_2026-2027.csv ; écrit data/protocole.json, data/protocole_meteo_jours.csv, data/protocole_creux.csv,
+data/protocole_simulation.csv, data/saisie_2026-2027_enrichie.csv.
+Bibliothèque standard seulement.
+"""
+import csv, json, os, math, statistics as st, datetime as dt
+
+RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+S = lambda *p: os.path.join(RACINE, "sources", *p)
+D = lambda *p: os.path.join(RACINE, "data", *p)
+EST = dt.timezone(dt.timedelta(hours=-5))
+
+# ---------------- hypothèses (toutes affichées dans les pages) ----------------
+H = {
+    "prix_bois_2023": 425.0,            # tout inclus (Marc, 2026-11-22)
+    "cordes": 4,                        # « 4 cordes habituelles » : le chiffrier ne le précise pas (hypothèse)
+    "hausse_par_corde": 25.0,           # Marc : +25 $ par corde depuis l'achat
+    "buches_saison": 928,               # projection 2023-24 (méthode)
+    "taxes": 0.14975,
+    "tarif_D_2026": {"p1": 0.07065, "p2": 0.11142, "acces": 0.46154},
+    "flex_D_2026": {"p1_hiver": 0.04886, "p2_hiver": 0.09103, "pointe": 0.46463, "acces": 0.46154,
+                    "max_heures": 120, "duree_evt": 4, "max_evt_jour": 2},
+    "credit_hivernal_2026": 0.58490,    # $/kWh effacé (option fermée aux nouveaux abonnés depuis le 2026-03-31)
+    "part_buche_dans_fenetre": 0.70,    # part de la chaleur d'une bûche livrée dans la fenêtre de 4 h si allumée juste avant (hypothèse)
+    "facteur_pointe_horaire": 1.25,     # besoin de chauffage aux heures 6-10 h / 16-20 h vs moyenne du jour (hypothèse)
+    "buches_par_dj": 0.45,              # plafond « raisonnable » de bûches/jour = 0,45 × degrés-jours (≈ 9 à 20 DJ, 13 à 30 DJ)
+    "buches_max_jour": 15,              # maximum observé en 2023-24
+    "seuil_creux": -2.0,                # anomalie (°C) sous la médiane mobile 31 j pour former un creux
+    "seuil_coeur": -3.0,                # jour « cœur » : T moy ≤ médiane mobile − 3 °C
+    "seuil_evt_predit": -12.0,          # hiver sans données HQ : jour d'événement probable si T moy ≤ −12 °C
+}
+HIVERS = {"2023-2024": 2023, "2024-2025": 2024, "2025-2026": 2025, "2026-2027": 2026}
+
+
+def jdate(s):
+    return dt.date.fromisoformat(s)
+
+
+def charger_meteo():
+    d = json.load(open(S("meteo_open-meteo_vaudreuil_2023-2026.json"), encoding="utf-8"))["daily"]
+    M = {}
+    for i, t in enumerate(d["time"]):
+        if d["temperature_2m_mean"][i] is None:
+            continue
+        M[jdate(t)] = {"t": d["temperature_2m_mean"][i], "tmin": d["temperature_2m_min"][i], "tmax": d["temperature_2m_max"][i]}
+    return M
+
+
+def charger_evenements():
+    ev = {}
+    p = S("hq_evenements_pointe.csv")
+    if not os.path.exists(p):
+        return ev
+    for r in csv.DictReader(open(p, encoding="utf-8-sig"), delimiter=";"):
+        if r["offre"] != "TPC-DPC":  # TPC-DPC = tarif Flex D (données ouvertes HQ)
+            continue
+        deb = dt.datetime.fromisoformat(r["datedebut"]).astimezone(EST)
+        fin = dt.datetime.fromisoformat(r["datefin"]).astimezone(EST)
+        ev.setdefault(deb.date(), []).append({"plage": r["plagehoraire"], "debut": deb.strftime("%H:%M"), "fin": fin.strftime("%H:%M"),
+                                             "heures": round((fin - deb).total_seconds() / 3600, 1)})
+    return ev
+
+
+def hiver_de(d):
+    y = d.year if d.month >= 7 else d.year - 1
+    return f"{y}-{y + 1}"
+
+
+def mediane_mobile(vals, k=15):
+    out = []
+    for i in range(len(vals)):
+        fen = [v for v in vals[max(0, i - k):i + k + 1] if v is not None]
+        out.append(st.median(fen) if fen else None)
+    return out
+
+
+def moyenne_mobile(vals, k=1):
+    out = []
+    for i in range(len(vals)):
+        fen = [v for v in vals[max(0, i - k):i + k + 1] if v is not None]
+        out.append(sum(fen) / len(fen) if fen else None)
+    return out
+
+
+def analyser(ecrire=True):
+    MOD = json.load(open(D("modele.json"), encoding="utf-8"))
+    c0, cdj, cb = MOD["modeles"]["principal"]["coef"]
+    kb = -cb
+    M = charger_meteo(); EV = charger_evenements()
+    tx = 1 + H["taxes"]
+    F = H["flex_D_2026"]; TD = H["tarif_D_2026"]
+
+    # ---------- coûts du bois ----------
+    prix_corde_2023 = H["prix_bois_2023"] / H["cordes"]
+    prix_ref = (prix_corde_2023 + H["hausse_par_corde"]) * H["cordes"]
+    buches_par_corde = H["buches_saison"] / H["cordes"]
+    cout_buche = prix_ref / H["buches_saison"]
+    val = {"tarif_D": kb * TD["p2"] * tx, "flex_hors_evt": kb * F["p2_hiver"] * tx, "flex_evt": kb * F["pointe"] * tx,
+           "tarif_D_2023": kb * 0.10041 * tx}
+    seuils = {k: prix_ref / v for k, v in val.items()}
+
+    # ---------- jours météo par hiver (1er oct. → 30 avr.) ----------
+    jours = []
+    for nom, y in HIVERS.items():
+        d0, d1 = dt.date(y, 10, 1), dt.date(y + 1, 4, 30)
+        ds = [d0 + dt.timedelta(i) for i in range((d1 - d0).days + 1) if (d0 + dt.timedelta(i)) in M]
+        if not ds:
+            continue
+        t = [M[d]["t"] for d in ds]
+        s3 = moyenne_mobile(t, 1); base = mediane_mobile(t, 15)
+        for i, d in enumerate(ds):
+            jours.append({"hiver": nom, "date": d, "t": t[i], "tmin": M[d]["tmin"], "tmax": M[d]["tmax"], "s3": s3[i], "base": base[i],
+                          "anom": s3[i] - base[i], "dj": max(18 - t[i], 0), "evt": len(EV.get(d, [])),
+                          "evt_h": sum(e["heures"] for e in EV.get(d, []))})
+
+    # ---------- climatologie et période critique ----------
+    def jour_saison(d):
+        return (d - dt.date(d.year if d.month >= 7 else d.year - 1, 10, 1)).days
+    clim = {}
+    complets = ["2023-2024", "2024-2025", "2025-2026"]
+    for j in jours:
+        if j["hiver"] in complets:
+            clim.setdefault(jour_saison(j["date"]), []).append(j["t"])
+    idx = sorted(clim)
+    cm = [sum(clim[i]) / len(clim[i]) for i in idx]
+    cl = moyenne_mobile(cm, 7)  # lissage 15 jours
+    sous0 = [i for i, v in zip(idx, cl) if v <= 0]
+    crit_deb, crit_fin = min(sous0), max(sous0)
+    ref = dt.date(2026, 10, 1)
+    to_date = lambda i: ref + dt.timedelta(i)
+    crit = {"debut": to_date(crit_deb).isoformat(), "fin": to_date(crit_fin).isoformat(), "jours": crit_fin - crit_deb + 1}
+    # part des DJ et des événements dans la période critique vs fenêtre de Marc (15 nov.-15 mars)
+    def dans(j, a, b):
+        i = jour_saison(j["date"]); return a <= i <= b
+    marc = (jour_saison(dt.date(2026, 11, 15)), jour_saison(dt.date(2027, 3, 15)))
+    tot_dj = sum(j["dj"] for j in jours if j["hiver"] in complets)
+    evj = [j for j in jours if j["hiver"] in ("2024-2025", "2025-2026")]
+    crit["part_dj"] = sum(j["dj"] for j in jours if j["hiver"] in complets and dans(j, crit_deb, crit_fin)) / tot_dj
+    crit["part_evt"] = sum(j["evt"] for j in evj if dans(j, crit_deb, crit_fin)) / max(1, sum(j["evt"] for j in evj))
+    crit["marc_part_dj"] = sum(j["dj"] for j in jours if j["hiver"] in complets and dans(j, *marc)) / tot_dj
+    crit["marc_part_evt"] = sum(j["evt"] for j in evj if dans(j, *marc)) / max(1, sum(j["evt"] for j in evj))
+    clim_serie = [{"date": to_date(i).isoformat(), "t_moy3": round(v, 2), "t_lisse": round(l, 2)} for i, v, l in zip(idx, cm, cl)]
+
+    # ---------- creux (systèmes froids) ----------
+    creux = []
+    for nom in HIVERS:
+        js = [j for j in jours if j["hiver"] == nom and dans(j, crit_deb - 14, crit_fin + 14)]
+        run = []
+        def fermer(run):
+            if len(run) >= 2:
+                cid = f"{nom[:4]}-{len([c for c in creux if c['hiver'] == nom]) + 1:02d}"
+                coeur = [j for j in run if j["t"] <= j["base"] + H["seuil_coeur"]]
+                for j in run:
+                    j["creux"] = cid; j["coeur"] = j in coeur
+                jm = min(run, key=lambda j: j["t"])
+                creux.append({"id": cid, "hiver": nom, "debut": run[0]["date"].isoformat(), "fin": run[-1]["date"].isoformat(),
+                              "jours": len(run), "jours_coeur": len(coeur), "t_min_jour": round(jm["t"], 1), "date_min": jm["date"].isoformat(),
+                              "t_moy": round(sum(j["t"] for j in run) / len(run), 1), "dj": round(sum(j["dj"] for j in run), 1),
+                              "evt": sum(j["evt"] for j in run), "dans_critique": any(dans(j, crit_deb, crit_fin) for j in run)})
+        trou = 0
+        for j in js:
+            if j["anom"] <= H["seuil_creux"]:
+                run.append(j); trou = 0
+            elif run and trou == 0 and j["anom"] <= 0:
+                trou = 1; run.append(j)  # tolère un jour de répit
+            else:
+                if run and run[-1]["anom"] > H["seuil_creux"]:
+                    run.pop()
+                fermer(run); run = []; trou = 0
+        fermer(run)
+    stats_creux = {}
+    for nom in HIVERS:
+        cs = [c for c in creux if c["hiver"] == nom and c["dans_critique"]]
+        if not cs:
+            continue
+        mins = [jdate(c["date_min"]) for c in cs]
+        ecarts = [(b - a).days for a, b in zip(mins, mins[1:])]
+        stats_creux[nom] = {"n": len(cs), "jours_med": st.median(c["jours"] for c in cs), "coeur_med": st.median(c["jours_coeur"] for c in cs),
+                            "jours_tot": sum(c["jours"] for c in cs), "coeur_tot": sum(c["jours_coeur"] for c in cs),
+                            "cycle_med": st.median(ecarts) if ecarts else None,
+                            "evt_dans_creux": sum(c["evt"] for c in cs),
+                            "evt_tot": sum(j["evt"] for j in jours if j["hiver"] == nom),
+                            "complet": nom in complets}
+
+    # ---------- probabilité d'événement selon la température ----------
+    bins = [(-99, -15), (-15, -12), (-12, -9), (-9, -6), (-6, -3), (-3, 99)]
+    proba = []
+    hiver_hq = [j for j in jours if j["hiver"] in ("2024-2025", "2025-2026") and (j["date"].month in (12, 1, 2, 3))]
+    for a, b in bins:
+        js = [j for j in hiver_hq if a < j["t"] <= b]
+        e = sum(1 for j in js if j["evt"])
+        proba.append({"de": a, "a": b, "jours": len(js), "jours_evt": e, "p": e / len(js) if js else 0})
+
+    # ---------- simulation ----------
+    def besoin_fenetre(dj):
+        return 4 * H["facteur_pointe_horaire"] * cdj * dj / 24  # kWh électriques de chauffage dans une fenêtre de 4 h
+
+    def plafond(dj):
+        return min(H["buches_max_jour"], round(H["buches_par_dj"] * dj))
+
+    sims, resume = [], {}
+    for nom in complets:
+        y = HIVERS[nom]
+        js = [j for j in jours if j["hiver"] == nom and dt.date(y, 11, 7) <= j["date"] <= dt.date(y + 1, 3, 31)]
+        reel = nom != "2023-2024"
+        for j in js:
+            if reel:
+                j["nevt"] = j["evt"] if dt.date(y, 12, 1) <= j["date"] <= dt.date(y + 1, 3, 31) else 0
+            else:
+                j["nevt"] = 1 if (j["t"] <= H["seuil_evt_predit"] and j["date"].month in (12, 1, 2, 3)) else 0
+        sdj = sum(j["dj"] for j in js)
+        B = H["buches_saison"]
+        strat = {}
+        # Q : quotidien (comme 2023-24) : bûches proportionnelles aux degrés-jours, chaque jour
+        q = {j["date"]: B * j["dj"] / sdj for j in js}
+        # C : ciblé
+        c = {j["date"]: 0.0 for j in js}
+        reste = B
+        evts = sorted([j for j in js if j["nevt"]], key=lambda j: -j["dj"])
+        for j in evts:
+            need = math.ceil(j["nevt"] * besoin_fenetre(j["dj"]) / (kb * H["part_buche_dans_fenetre"]))
+            n = min(max(need, plafond(j["dj"])), reste); c[j["date"]] = n; reste -= n
+        cands = sorted([j for j in js if not j["nevt"] and j.get("creux") and dans(j, crit_deb, crit_fin)], key=lambda j: (-int(j.get("coeur", False)), -j["dj"]))
+        for j in cands:
+            n = min(plafond(j["dj"]), reste); c[j["date"]] = n; reste -= n
+        autres = sorted([j for j in js if not c[j["date"]] and j["t"] <= 0], key=lambda j: -j["dj"])
+        for j in autres:
+            n = min(plafond(j["dj"]), reste); c[j["date"]] = n; reste -= n
+        for nomS, plan in (("quotidien", q), ("cible", c)):
+            tot = {"buches": 0, "kwh": 0, "base": 0, "prime": 0, "prime_kwh": 0, "tarifD": 0, "jours_feu": 0, "evt_couverts": 0, "evt": 0}
+            for j in js:
+                b = plan[j["date"]]
+                kwh = kb * b
+                besoin = j["nevt"] * besoin_fenetre(j["dj"])
+                if nomS == "cible":
+                    dans_f = min(besoin, kwh * H["part_buche_dans_fenetre"])
+                else:
+                    dans_f = min(besoin, kwh * 4 * j["nevt"] / 24)
+                base = kwh * F["p2_hiver"] * tx
+                prime = dans_f * (F["pointe"] - F["p2_hiver"]) * tx
+                tot["buches"] += b; tot["kwh"] += kwh; tot["base"] += base; tot["prime"] += prime; tot["prime_kwh"] += dans_f
+                tot["tarifD"] += kwh * TD["p2"] * tx; tot["jours_feu"] += b > 0.5; tot["evt"] += j["nevt"]
+                tot["evt_couverts"] += (j["nevt"] if besoin and dans_f >= 0.95 * besoin else 0)
+                sims.append({"hiver_meteo": nom, "strategie": nomS, "date_meteo": j["date"].isoformat(),
+                             "date_2026_2027": (j["date"].replace(year=j["date"].year + (2026 - y))).isoformat() if not (j["date"].month == 2 and j["date"].day == 29) else "",
+                             "t_moy": j["t"], "dj18": round(j["dj"], 1), "creux": j.get("creux", ""), "coeur": int(j.get("coeur", False)),
+                             "evenements": j["nevt"], "evt_reels": int(reel), "buches": round(b, 2), "kwh_evites": round(kwh, 1),
+                             "kwh_evites_pointe": round(dans_f, 2), "kwh_sans_feu": round(c0 + cdj * j["dj"], 1),
+                             "kwh_avec_feu": round(c0 + cdj * j["dj"] - kwh, 1), "valeur_base": round(base, 2), "valeur_pointe": round(prime, 2)})
+            tot["valeur"] = tot["base"] + tot["prime"]
+            tot["reste"] = B - tot["buches"]
+            strat[nomS] = {k: round(v, 2) for k, v in tot.items()}
+        resume[nom] = {"dj_saison": round(sdj), "strategies": strat, "evts_reels": reel}
+
+    # courbe « part des bûches → part du gain » (stratégie ciblée)
+    courbes = {}
+    for nom in complets:
+        rows = [s for s in sims if s["hiver_meteo"] == nom and s["strategie"] == "cible" and s["buches"] > 0]
+        par = []
+        for s in rows:
+            v = (s["valeur_base"] + s["valeur_pointe"]) / s["buches"]
+            par.append((v, s["buches"]))
+        par.sort(key=lambda x: -x[0])
+        tb = sum(b for _, b in par); tv = sum(v * b for v, b in par); cb_, cv = 0, 0; pts = [(0, 0)]
+        for v, b in par:
+            cb_ += b; cv += v * b; pts.append((cb_ / tb, cv / tv))
+        courbes[nom] = pts
+
+    # ---------- saisie 2026-2027 ----------
+    saisie = []
+    p = D("saisie_2026-2027.csv")
+    if os.path.exists(p):
+        for r in csv.DictReader(open(p, encoding="utf-8-sig")):
+            if not (r.get("date") or "").strip():
+                continue
+            d = jdate(r["date"].strip())
+            m = M.get(d)
+            b = float(r.get("buches") or 0)
+            kwh = float(r["kwh"]) if (r.get("kwh") or "").strip() else None
+            t = m["t"] if m else None
+            djv = max(18 - t, 0) if t is not None else None
+            att = (c0 + cdj * djv - kb * b) if djv is not None else None
+            evh = (r.get("evenement_hq") or "").strip().lower() in ("oui", "o", "1", "x", "yes")
+            evo = len(EV.get(d, []))
+            saisie.append({"date": d.isoformat(), "buches": b, "kwh": kwh, "evenement_hq_saisi": int(evh), "evenements_hq_donnees": evo,
+                           "jour_temoin": int((r.get("jour_temoin") or "").strip().lower() in ("oui", "o", "1", "x", "yes")),
+                           "remarque": r.get("remarque", ""), "t_moy": t, "dj18": round(djv, 1) if djv is not None else "",
+                           "kwh_attendu_modele": round(att, 1) if att is not None else "", "kwh_sans_feu_modele": round(c0 + cdj * djv, 1) if djv is not None else "",
+                           "kwh_evites_modele": round(kb * b, 1), "valeur_base": round(kb * b * F["p2_hiver"] * tx, 2),
+                           "ecart_kwh": round(kwh - att, 1) if (kwh is not None and att is not None) else ""})
+    else:
+        with open(p, "w", newline="", encoding="utf-8") as fo:
+            csv.writer(fo).writerow(["date", "buches", "kwh", "evenement_hq", "jour_temoin", "remarque"])
+
+    # ---------- test : le rendement par bûche dépend-il du froid ? (interaction bûches × DJ, données 2023-24) ----------
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from preparer_donnees import mco
+    jn = [r for r in csv.DictReader(open(D("journal_nettoye.csv"), encoding="utf-8")) if r["statut"] == "mesure"]
+    inter = mco([[1, float(r["dj18"]), float(r["nb_buches"]), float(r["nb_buches"]) * float(r["dj18"])] for r in jn], [float(r["kwh_reel"]) for r in jn])
+    inter["kwh_par_buche_selon_dj"] = {str(x): -(inter["coef"][2] + inter["coef"][3] * x) for x in (10, 15, 20, 25, 30, 35)}
+
+    out = {"hypotheses": H, "interaction": inter, "kwh_par_buche": kb, "coef": [c0, cdj, cb], "prix_corde_2023": prix_corde_2023, "prix_ref": prix_ref,
+           "buches_par_corde": buches_par_corde, "cout_buche": cout_buche, "valeur_buche": val, "seuils": seuils,
+           "critique": crit, "climatologie": clim_serie, "stats_creux": stats_creux, "proba_evt": proba, "resume_sim": resume,
+           "courbes": courbes, "meteo_derniere_date": max(M).isoformat(),
+           "evts_par_hiver": {h: {"jours": sum(1 for j in jours if j["hiver"] == h and j["evt"]), "evenements": sum(j["evt"] for j in jours if j["hiver"] == h),
+                                  "heures": sum(j["evt_h"] for j in jours if j["hiver"] == h)} for h in ("2024-2025", "2025-2026", "2026-2027")},
+           "n_saisie": len(saisie)}
+    if ecrire:
+        json.dump(out, open(D("protocole.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+        with open(D("protocole_meteo_jours.csv"), "w", newline="", encoding="utf-8") as fo:
+            w = csv.writer(fo); w.writerow(["hiver", "date", "t_moy", "t_min", "t_max", "t_lisse_3j", "mediane_31j", "anomalie", "dj18", "creux", "coeur", "evenements_flexd", "heures_evt"])
+            for j in jours:
+                w.writerow([j["hiver"], j["date"], j["t"], j["tmin"], j["tmax"], round(j["s3"], 2), round(j["base"], 2), round(j["anom"], 2), round(j["dj"], 1),
+                            j.get("creux", ""), int(j.get("coeur", False)), j["evt"], j["evt_h"]])
+        with open(D("protocole_creux.csv"), "w", newline="", encoding="utf-8") as fo:
+            w = csv.DictWriter(fo, list(creux[0].keys())); w.writeheader(); w.writerows(creux)
+        with open(D("protocole_simulation.csv"), "w", newline="", encoding="utf-8") as fo:
+            w = csv.DictWriter(fo, list(sims[0].keys())); w.writeheader(); w.writerows(sims)
+        cols = ["date", "buches", "kwh", "evenement_hq_saisi", "evenements_hq_donnees", "jour_temoin", "remarque", "t_moy", "dj18",
+                "kwh_attendu_modele", "kwh_sans_feu_modele", "kwh_evites_modele", "valeur_base", "ecart_kwh"]
+        with open(D("saisie_2026-2027_enrichie.csv"), "w", newline="", encoding="utf-8") as fo:
+            w = csv.DictWriter(fo, cols); w.writeheader(); w.writerows(saisie)
+    return out
+
+
+if __name__ == "__main__":
+    o = analyser()
+    print(json.dumps({k: o[k] for k in ("prix_ref", "cout_buche", "valeur_buche", "seuils", "critique", "stats_creux", "proba_evt", "evts_par_hiver")}, indent=1, default=str))
+    for h, r in o["resume_sim"].items():
+        print(h, r["dj_saison"], r["strategies"])

@@ -67,17 +67,17 @@ code{background:#f4f4f4;padding:1px 4px;border-radius:3px}
 
 NAV = [("index.html", "Sommaire global"), ("mensuel.html", "Mensuel"), ("jours.html", "Jour par jour"),
        ("donnees.html", "Données brutes"), ("factures.html", "Factures Hydro"), ("qualite.html", "Qualité des données"),
-       ("methode.html", "Méthode"), ("decisions.html", "Propositions")]
+       ("methode.html", "Méthode"), ("decisions.html", "Propositions"), ("protocole.html", "▶ Protocole 2026-27")]
 
 
-def page(nom, titre, corps, quand):
+def page(nom, titre, corps, quand, sous=None):
     nav = " · ".join(f"<a href='{u}'{' class=actif' if u == nom else ''}>{E(t)}</a>" for u, t in NAV)
     mois = " · ".join(f"<a href='mois-{m}.html'>{E(COURT[m])}</a>" for m in MOIS)
     h = (f"<!doctype html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'>"
          f"<title>Bois de chauffage – {E(titre)}</title><style>{CSS}</style></head><body>"
-         f"<nav class='nav'>{nav} &nbsp;|&nbsp; Mois : {mois}</nav><h1>{E(titre)}</h1>"
-         f"<p class='sous'>Hiver 2023-2024 · généré le {E(quand)} par <code>outils/generer_site.py</code> à partir de <code>data/</code>. "
-         "Chiffrier source « Bois de chauffage » (Google Drive), lu en lecture seule.</p>" + corps + "</body></html>")
+         f"<nav class='nav'>{nav} &nbsp;|&nbsp; Mois : {mois}</nav><h1>{E(titre)}</h1>" +
+         (sous or (f"<p class='sous'>Hiver 2023-2024 · généré le {E(quand)} par <code>outils/generer_site.py</code> à partir de <code>data/</code>. "
+         "Chiffrier source « Bois de chauffage » (Google Drive), lu en lecture seule.</p>")) + corps + "</body></html>")
     with open(os.path.join(OUT, nom), "w", encoding="utf-8") as f:
         f.write(h)
 
@@ -412,25 +412,40 @@ def main():
              f"<p><b>Seuil de rentabilité</b> au tarif 2023-2024 : {nb(seuil)} bûches par saison pour 425 $ (taxes incluses des deux côtés). "
              f"Chaque bûche vaut ≈ {argent(val_buche_ttc)} d'électricité ; elle te coûte 425 $ ÷ nombre de bûches par saison.</p>"
              "<h2>Hypothèses et limites</h2><ul>"
-             "<li>425 $ = coût total du bois pour la saison (4 cordes), taxes incluses ; à confirmer.</li>"
-             "<li>Lieu météo : Vaudreuil-Dorion (déduit de ta clinique vétérinaire) ; tout point de l'ouest de l'île donne des températures quasi identiques.</li>"
+             "<li>425 $ = coût total du bois pour la saison, tout inclus (taxes comprises) : <b>confirmé par Marc le 2026-11-22</b>. Nombre de cordes absent du chiffrier : 4 cordes supposées.</li>"
+             "<li>Lieu météo : Vaudreuil-Dorion, <b>confirmé par Marc le 2026-11-22</b>.</li>"
              "<li>Bûches toutes équivalentes (taille, essence, humidité) ; ni poids ni volume mesurés.</li>"
              "<li>Pas de prise en compte du temps de présence, des autres usages (eau chaude, cuisson), de l'ensoleillement ou du vent ; ils sont dans le bruit (écart-type résiduel ≈ "
              f"{nb(M['principal']['rmse'])} kWh/jour).</li>"
-             "<li>Coûts non comptés : allumage, ramonage, assurance, temps et plaisir du feu.</li></ul>")
+             "<li>Coûts non comptés : allumage, ramonage, assurance, temps et plaisir du feu.</li></ul>"
+             "<h2 id='maj-2026'>Mise à jour du 22 novembre 2026</h2><ul>"
+             "<li>Coût de référence du bois : 4 cordes × (106,25 $ + 25 $) = <b>525 $</b> tout inclus (hausse de 25 $ par corde indiquée par Marc ; 4 cordes = hypothèse).</li>"
+             "<li>Marc est passé à la tarification dynamique (tarif <b>Flex D</b>, à confirmer) : hors événement 9,103 ¢ en 2e tranche, 46,463 ¢ pendant les événements (tarifs au 1er avril 2026).</li>"
+             "<li>Une bûche vaut ≈ 0,47 $ hors événement (Flex D) contre ≈ 0,58 $ au tarif D 2026 ; seuil de rentabilité ≈ 1 115 bûches (Flex D hors événement) ou ≈ 911 (tarif D).</li>"
+             "<li>Test ajouté : interaction bûches × degrés-jours non significative ; le gain par bûche reste constant dans le modèle.</li>"
+             "<li>Suite : <a href='protocole.html'>Protocole hiver 2026-2027</a> (étude météo, simulation, saisie).</li></ul>")
     page("methode.html", "Méthode, modèle et incertitudes", corps, quand)
 
     # ---------------- propositions ----------------
-    corps = ("<p>Première itération. Points à décider avec toi avant d'aller plus loin :</p><ol>"
-             "<li><b>Format.</b> Garder ce site statique (comme <code>suivi-pbr</code>) régénéré par un script, et le chiffrier Google devient une simple saisie (date, bûches, kWh, remarque). "
-             "Ou ajouter un onglet « Saisie » propre dans le chiffrier et laisser le script tout recalculer.</li>"
-             "<li><b>Données à ajouter dès cet hiver (2026-2027).</b> Peser 10 bûches une fois (kg moyen) ; compter les bûches par corde à la livraison ; noter le prix et les taxes du bois ; "
-             "marquer les jours d'absence ; exporter les kWh quotidiens depuis l'Espace client Hydro (CSV) plutôt que les recopier.</li>"
-             "<li><b>Contrôle annuel.</b> Rapprocher chaque facture Hydro avec le journal (comme ici, à 0,6 % près) et ajouter les hivers 2022-2023 et 2024-2026 si l'historique Hydro est téléchargeable.</li>"
-             "<li><b>Jours témoins.</b> Prévoir quelques jours froids volontairement sans feu (ou en le notant quand ça arrive) : c'est ce qui manque le plus pour resserrer l'estimation.</li>"
-             f"<li><b>Décision bois.</b> Au tarif 2026 (11,142 ¢), le seuil de rentabilité descend à ≈ {nb(PRIX_BOIS / (kb * TARIF_2026_P2 * tx))} bûches pour 425 $ ; "
-             "il faut le prix actuel de la corde pour conclure.</li></ol>")
+    corps = ("<h2>Décidé le 22 novembre 2026</h2><ul>"
+             "<li>425 $ = tout inclus ; référence actuelle 525 $ (4 cordes × +25 $). Météo : Vaudreuil-Dorion.</li>"
+             "<li>Objectif 2026-2027 : <b>chauffer aux moments rentables</b> (événements de pointe d'abord, puis creux froids), pas au maximum chaque jour. "
+             "Voir le <a href='protocole.html'>protocole</a>.</li>"
+             "<li>Format retenu : site statique régénéré par script ; saisie simplifiée dans <code>data/saisie_2026-2027.csv</code>.</li></ul>"
+             "<h2>À décider</h2><ol>"
+             "<li><b>Option tarifaire</b> : confirmer Flex D (vs crédit hivernal, fermé aux nouveaux abonnements depuis le 31 mars 2026). Les calculs changent si c'est le crédit hivernal.</li>"
+             "<li><b>Quantité de bois</b> : au tarif Flex D, une bûche brûlée hors événement vaut ≈ 0,47 $ pour un coût ≈ 0,57 $. Si on ne vise que les événements et les creux, "
+             "3 cordes pourraient suffire ; à trancher avant l'achat (compter les bûches d'une corde à la livraison).</li>"
+             "<li><b>Mesure des événements</b> : télécharger les kWh <b>horaires</b> de l'Espace client les jours d'événement pour mesurer l'effet réel du feu dans la fenêtre 6-10 h / 16-20 h "
+             "(le modèle actuel est quotidien).</li>"
+             "<li><b>Jours témoins</b> : un jour froid sans feu par mois environ, pour resserrer l'estimation.</li>"
+             "<li><b>Données à ajouter</b> : poids moyen d'une bûche (peser 10 bûches), prix et taxes du bois, absences, export CSV quotidien de l'Espace client.</li></ol>"
+             "<h2>Propositions de la première itération (pour mémoire)</h2><ol class='petit'>"
+             "<li>Garder un site statique régénéré par script (retenu).</li><li>Peser les bûches, compter les bûches par corde, noter les absences (à faire).</li>"
+             "<li>Rapprocher chaque facture avec le journal.</li><li>Jours témoins (intégré au protocole).</li><li>Décision bois au tarif 2026 (voir protocole).</li></ol>")
     page("decisions.html", "Propositions et décisions à prendre", corps, quand)
+    import generer_protocole
+    generer_protocole.main(quand)
     print("Pages :", sorted(os.listdir(OUT)))
 
 

@@ -42,9 +42,10 @@ def series(labels, series, h=300, w=1100, titre_g="", titre_d="", zones=(), etiq
     def Y(v, b):
         lo, hi, _ = b; return mt + ph - (v - lo) / (hi - lo) * ph
     o = [f"<svg viewBox='0 0 {w} {h}' class='graphe' role='img' xmlns='http://www.w3.org/2000/svg'>"]
-    for i0, i1, lib in zones:
-        o.append(f"<rect x='{ml + bw * i0:.1f}' y='{mt}' width='{bw * (i1 - i0 + 1):.1f}' height='{ph}' fill='{COUL['fond_e']}'/>"
-                 f"<text x='{ml + bw * (i0 + i1 + 1) / 2:.1f}' y='{mt + 14}' text-anchor='middle' class='ax'>{E(lib)}</text>")
+    for z in zones:
+        i0, i1, lib = z[:3]; zc = z[3] if len(z) > 3 else COUL['fond_e']
+        o.append(f"<rect x='{ml + bw * i0:.1f}' y='{mt}' width='{bw * (i1 - i0 + 1):.1f}' height='{ph}' fill='{zc}'><title>{E(lib)}</title></rect>"
+                 + (f"<text x='{ml + bw * (i0 + i1 + 1) / 2:.1f}' y='{mt + 14}' text-anchor='middle' class='ax'>{E(lib)}</text>" if len(z) < 5 or z[4] else ""))
     if bg:
         for t in bg[2]:
             y = Y(t, bg); o.append(f"<line x1='{ml}' x2='{ml + pw}' y1='{y:.1f}' y2='{y:.1f}' class='grille'/>"
@@ -157,4 +158,22 @@ def calendrier(jours, valeur, couleur, info, lien, vmax=None):
         o.append(f"<a href='{E(lien(j))}'><rect x='{ml + s * c}' y='{mt + k * c}' width='{c - 2}' height='{c - 2}' rx='2' fill='{fill}'>"
                  f"<title>{E(info(j))}</title></rect></a>")
     o.append("</svg>")
+    return "".join(o)
+
+
+def courbes(lignes, h=320, w=540, tx="", ty=""):
+    """lignes : dicts {nom, couleur, pts: [(x, y)]} avec x et y dans [0, 1] (affichés en %)."""
+    ml, mr, mt, mb = 52, 16, 16, 56
+    pw, ph = w - ml - mr, h - mt - mb
+    X = lambda v: ml + v * pw; Y = lambda v: mt + ph - v * ph
+    o = [f"<svg viewBox='0 0 {w} {h}' class='graphe' xmlns='http://www.w3.org/2000/svg'>"]
+    for t in range(0, 101, 20):
+        o.append(f"<line x1='{ml}' x2='{ml + pw}' y1='{Y(t / 100):.1f}' y2='{Y(t / 100):.1f}' class='grille'/><text x='{ml - 6}' y='{Y(t / 100) + 4:.1f}' text-anchor='end' class='ax'>{t} %</text>"
+                 f"<text x='{X(t / 100):.1f}' y='{mt + ph + 16}' text-anchor='middle' class='ax'>{t} %</text>")
+    o.append(f"<line x1='{X(0)}' y1='{Y(0)}' x2='{X(1)}' y2='{Y(1)}' stroke='#bbb' stroke-dasharray='4 4'/>")
+    o.append(f"<text x='{ml + pw / 2}' y='{h - 24}' text-anchor='middle' class='ax b'>{E(tx)}</text>"
+             f"<text x='12' y='{mt + ph / 2}' transform='rotate(-90 12 {mt + ph / 2})' text-anchor='middle' class='ax b'>{E(ty)}</text>")
+    for l in lignes:
+        o.append(f"<polyline fill='none' stroke='{l['couleur']}' stroke-width='2' points='" + " ".join(f"{X(x):.1f},{Y(y):.1f}" for x, y in l["pts"]) + "'/>")
+    o.append(legende(lignes, ml, h - 6)); o.append("</svg>")
     return "".join(o)
