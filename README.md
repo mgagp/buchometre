@@ -33,14 +33,24 @@ et saisie avec suivi réel vs projection. Analyse : `outils/protocole.py` ; page
 Ouvrir `data/saisie_2026-2027.csv` (Excel, LibreOffice ou éditeur texte) et ajouter une ligne par jour,
 même sans feu :
 
-    date,buches,kwh,evenement_hq,jour_temoin,remarque
-    2026-12-08,9,61,oui,non,feu allumé 5 h 30 pour l'événement du matin
+    date,buches,kwh,evenement_hq,jour_temoin,stock_compte,remarque
+    2026-12-08,5,61,oui,non,,feu allumé 5 h 30 pour l'événement du matin
+    2026-12-01,0,72,non,non,330,tas recompté
 
 - `date` : AAAA-MM-JJ ; `buches` : nombre ; `kwh` : consommation du jour (Espace client Hydro-Québec)
 - `evenement_hq` : oui/non ; `jour_temoin` : oui si jour froid volontairement sans feu ; `remarque` : libre
+- `stock_compte` : facultatif ; nombre de bûches comptées ce jour-là (remplace le stock calculé à partir de ce jour)
 - Enregistrer en CSV (séparateur virgule, UTF-8).
 
 ### Régénérer
     py outils\preparer_donnees.py --maj    (télécharge la météo Open-Meteo et les événements HQ, puis recalcule)
     py outils\generer_site.py              (réécrit rapports\, puis F5 dans le navigateur)
 Sans connexion internet, omettre `--maj` : les sources déjà présentes sont utilisées.
+
+### Stock 2026-2027 et règle de budget (mise à jour du 2026-11-22, 12 h 51)
+Tarif Flex D confirmé. Pas d'achat de bois : stock initial ≈ 1,5 corde × 232 bûches = 348 bûches
+(paramètres `cordes_restantes` et `buches_par_corde` dans `outils/protocole.py`, ou mieux : colonne `stock_compte`).
+La page Saisie compare le stock restant réel au plan et à la réserve pour les événements.
+Règle : événements toujours (4-5 bûches chacun) ; réserve de 5 bûches par événement encore attendu ;
+jours cœur ≤ −8 °C jusqu'à 10 bûches si la réserve est respectée ; surplus libéré à partir du 1er février ;
+si le stock passe 50 bûches sous le plan, événements seulement.

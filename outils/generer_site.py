@@ -420,7 +420,8 @@ def main():
              "<li>Coûts non comptés : allumage, ramonage, assurance, temps et plaisir du feu.</li></ul>"
              "<h2 id='maj-2026'>Mise à jour du 22 novembre 2026</h2><ul>"
              "<li>Coût de référence du bois : 4 cordes × (106,25 $ + 25 $) = <b>525 $</b> tout inclus (hausse de 25 $ par corde indiquée par Marc ; 4 cordes = hypothèse).</li>"
-             "<li>Marc est passé à la tarification dynamique (tarif <b>Flex D</b>, à confirmer) : hors événement 9,103 ¢ en 2e tranche, 46,463 ¢ pendant les événements (tarifs au 1er avril 2026).</li>"
+             "<li>Marc est au tarif <b>Flex D</b> (confirmé le 22 nov. 2026, 12 h 51) : hors événement 9,103 ¢ en 2e tranche, 46,463 ¢ pendant les événements (tarifs au 1er avril 2026). Le crédit hivernal est écarté.</li>"
+             "<li>Pas d'achat de bois en 2026-27 : stock ≈ 1,5 corde ≈ 348 bûches (232 bûches/corde, ratio dérivé de 2023-24, fragile). Bois déjà payé : objectif = maximiser la valeur évitée avec ce stock (simulation jour par jour avec une règle de budget). Une corde de plus ajouterait ≈ 109 $ pour ≈ 131 $ : non rentable.</li>"
              "<li>Une bûche vaut ≈ 0,47 $ hors événement (Flex D) contre ≈ 0,58 $ au tarif D 2026 ; seuil de rentabilité ≈ 1 115 bûches (Flex D hors événement) ou ≈ 911 (tarif D).</li>"
              "<li>Test ajouté : interaction bûches × degrés-jours non significative ; le gain par bûche reste constant dans le modèle.</li>"
              "<li>Suite : <a href='protocole.html'>Protocole hiver 2026-2027</a> (étude météo, simulation, saisie).</li></ul>")
@@ -428,21 +429,20 @@ def main():
 
     # ---------------- propositions ----------------
     corps = ("<h2>Décidé le 22 novembre 2026</h2><ul>"
-             "<li>425 $ = tout inclus ; référence actuelle 525 $ (4 cordes × +25 $). Météo : Vaudreuil-Dorion.</li>"
-             "<li>Objectif 2026-2027 : <b>chauffer aux moments rentables</b> (événements de pointe d'abord, puis creux froids), pas au maximum chaque jour. "
-             "Voir le <a href='protocole.html'>protocole</a>.</li>"
-             "<li>Format retenu : site statique régénéré par script ; saisie simplifiée dans <code>data/saisie_2026-2027.csv</code>.</li></ul>"
-             "<h2>À décider</h2><ol>"
-             "<li><b>Option tarifaire</b> : confirmer Flex D (vs crédit hivernal, fermé aux nouveaux abonnements depuis le 31 mars 2026). Les calculs changent si c'est le crédit hivernal.</li>"
-             "<li><b>Quantité de bois</b> : au tarif Flex D, une bûche brûlée hors événement vaut ≈ 0,47 $ pour un coût ≈ 0,57 $. Si on ne vise que les événements et les creux, "
-             "3 cordes pourraient suffire ; à trancher avant l'achat (compter les bûches d'une corde à la livraison).</li>"
-             "<li><b>Mesure des événements</b> : télécharger les kWh <b>horaires</b> de l'Espace client les jours d'événement pour mesurer l'effet réel du feu dans la fenêtre 6-10 h / 16-20 h "
-             "(le modèle actuel est quotidien).</li>"
-             "<li><b>Jours témoins</b> : un jour froid sans feu par mois environ, pour resserrer l'estimation.</li>"
-             "<li><b>Données à ajouter</b> : poids moyen d'une bûche (peser 10 bûches), prix et taxes du bois, absences, export CSV quotidien de l'Espace client.</li></ol>"
+             "<li>425 $ = tout inclus ; repère de remplacement 131,25 $ la corde (425 $ ÷ 4 + 25 $). Météo : Vaudreuil-Dorion.</li>"
+             "<li><b>Tarif Flex D confirmé</b> (activé récemment) ; l'option de crédit hivernal est écartée.</li>"
+             "<li><b>Pas d'achat de bois cet hiver</b> : stock ≈ 1,5 corde ≈ 348 bûches, déjà payé. Objectif : placer ce stock là où il évite le plus d'électricité "
+             "(événements de pointe d'abord, puis jours cœur des creux froids). Voir le <a href='protocole.html#regles'>protocole et sa règle de budget</a>.</li>"
+             "<li>Format retenu : site statique régénéré par script ; saisie simplifiée dans <code>data/saisie_2026-2027.csv</code>, avec suivi du stock.</li></ul>"
+             "<h2>À décider ou à faire</h2><ol>"
+             "<li><b>Compter le stock</b> (ou une rangée, puis extrapoler) et l'inscrire dans la colonne <code>stock_compte</code> : le ratio de 232 bûches par corde est fragile (±25 %).</li>"
+             "<li><b>Achat d'appoint</b> : non recommandé (≈ 109 $ de valeur pour ≈ 131 $ la corde) ; à revoir seulement si le recomptage donne moins de ≈ 150 bûches.</li>"
+             "<li><b>Mesure des événements</b> : télécharger les kWh <b>horaires</b> de l'Espace client les jours d'événement pour mesurer l'effet réel du feu dans la fenêtre 6-10 h / 16-20 h.</li>"
+             "<li><b>Jours témoins</b> : un jour froid sans feu par mois environ.</li>"
+             "<li><b>Données à ajouter</b> : poids moyen d'une bûche (peser 10 bûches), absences, export CSV quotidien de l'Espace client.</li></ol>"
              "<h2>Propositions de la première itération (pour mémoire)</h2><ol class='petit'>"
              "<li>Garder un site statique régénéré par script (retenu).</li><li>Peser les bûches, compter les bûches par corde, noter les absences (à faire).</li>"
-             "<li>Rapprocher chaque facture avec le journal.</li><li>Jours témoins (intégré au protocole).</li><li>Décision bois au tarif 2026 (voir protocole).</li></ol>")
+             "<li>Rapprocher chaque facture avec le journal.</li><li>Jours témoins (intégré au protocole).</li><li>Décision bois au tarif 2026 (pas d'achat cette année).</li></ol>")
     page("decisions.html", "Propositions et décisions à prendre", corps, quand)
     import generer_protocole
     generer_protocole.main(quand)

@@ -1,1 +1,1 @@
-date,buches,kwh,evenement_hq_saisi,evenements_hq_donnees,jour_temoin,remarque,t_moy,dj18,kwh_attendu_modele,kwh_sans_feu_modele,kwh_evites_modele,valeur_base,ecart_kwh
+date,buches,stock_compte,stock_restant,kwh,evenement_hq_saisi,evenements_hq_donnees,jour_temoin,remarque,t_moy,dj18,kwh_attendu_modele,kwh_sans_feu_modele,kwh_evites_modele,valeur_base,ecart_kwh
