@@ -28,7 +28,9 @@ def rendre(sortie, quand):
             "et les événements Hydro-Québec du jour. Si un téléchargement échoue, le site est construit avec les données versionnées.</li>"
             "<li><b>Changement de saison</b> : une entrée dans <code>data/saisons.json</code> ; la saison précédente passe dans Archives.</li>"
             f"<li>Code et historique : <a href='{DEPOT}'>{DEPOT.replace('https://', '')}</a>.</li></ul>")
-    corps = (sortie.get("methode.html", "") + "<h2 id='decisions'>Historique des décisions</h2>" + hist + site)
+    boussole = (f"<p>Intention, principes de travail et décisions détaillées (contexte, options, pour et contre) : "
+                f"<a href='{DEPOT}/tree/main/docs/boussole'>la boussole du projet</a>.</p>")
+    corps = (sortie.get("methode.html", "") + "<h2 id='decisions'>Historique des décisions</h2>" + boussole + hist + site)
     page("methode.html", "Méthode, modèle et décisions", corps, quand,
          sous=f"<p class='sous'>Comment les chiffres sont calculés, avec leurs incertitudes. Généré le {E(quand)}.</p>", contexte="Méthode")
 

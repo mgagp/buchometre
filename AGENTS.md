@@ -2,6 +2,21 @@
 
 Site public : https://mgagp.github.io/buchometre/ · dépôt : https://github.com/mgagp/buchometre
 
+## Commencer ici : la boussole
+Avant toute modification autre qu'une saisie, lire [docs/boussole/](docs/boussole/README.md) :
+- [INTENTION.md](docs/boussole/INTENTION.md) : pourquoi le projet existe, ses valeurs, son périmètre, qui décide ;
+- [PRINCIPES.md](docs/boussole/PRINCIPES.md) : comment trancher quand aucune règle ne s'applique ;
+- [decisions/](docs/boussole/decisions/README.md) : les choix datés, avec leurs raisons et leur statut.
+
+Pour une simple saisie, la section « Ajouter une saisie » ci-dessous suffit.
+
+**Ajouter une décision** quand un choix change une règle de chauffe, un comportement du site, une contrainte
+ou une façon de travailler : copier le modèle de `docs/boussole/decisions/README.md` dans
+`docs/boussole/decisions/AAAA-MM-JJ-sujet.md`, ajouter une ligne à l'index, puis faire un commit dédié
+(« Boussole : … »). Une décision prise sans l'accord explicite de Marc a le statut « Hypothèse ». On ne réécrit
+pas une ancienne décision : on la marque « Remplacée par … ». Ce fichier reste une table de pointeurs : on n'y
+recopie pas le contenu de la boussole.
+
 ## But
 Faire parler les mesures de chauffage au bois d'une maison de Vaudreuil-Dorion (Québec) : bûches brûlées,
 kWh Hydro-Québec, température. On en tire l'électricité évitée par le bois, sa valeur en dollars et un
