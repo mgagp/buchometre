@@ -20,3 +20,9 @@ def archivees():
 
 def d(s):
     return dt.date.fromisoformat(s)
+
+
+def aujourdhui():
+    """Date du jour (fuseau du système : TZ=America/Toronto en CI). BUCHOMETRE_DATE=AAAA-MM-JJ la remplace pour un essai."""
+    v = os.environ.get("BUCHOMETRE_DATE")
+    return dt.date.fromisoformat(v) if v else dt.date.today()

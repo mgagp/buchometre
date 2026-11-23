@@ -48,6 +48,8 @@ def main():
     methode.archives(arch, quand)
     with open(os.path.join(OUT, "data", "saison_courante.json"), "w", encoding="utf-8") as f:
         json.dump(calc_saison.en_json(e), f, ensure_ascii=False, indent=1, default=str)
+    with open(os.path.join(OUT, "data", "recommandation.json"), "w", encoding="utf-8") as f:  # lu par la routine du matin
+        json.dump(calc_saison.pour_routine(e), f, ensure_ascii=False, indent=1, default=str)
     red = gabarit.redirections()
     print(f"Site généré : {len(gabarit._ecrites)} pages, {len(red)} redirections ; saison {cour['id']}, jour {e['jour']}/{e['jours_total']}, "
           f"recommandation du jour : {e['reco'][1].get('raison')}")

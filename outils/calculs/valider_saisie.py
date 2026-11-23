@@ -5,7 +5,7 @@ Avertissements : affichés dans le Journal, la publication continue.
 """
 import csv, os, datetime as dt
 from chemins import DATA
-from calculs.saisons import courante
+from calculs.saisons import courante, aujourdhui
 
 COLS = ["date", "buches", "kwh", "evenement_hq", "jour_temoin", "stock_compte", "remarque"]
 OUINON = ("", "oui", "non", "o", "n", "1", "0", "x")
@@ -16,7 +16,7 @@ def valider(aujourd_hui=None):
     erreurs, avert = [], []
     if not os.path.exists(p):
         return erreurs, avert
-    aujourd_hui = aujourd_hui or dt.date.today()
+    aujourd_hui = aujourd_hui or aujourdhui()
     deb, fin = dt.date.fromisoformat(s["debut"]), dt.date.fromisoformat(s["fin"])
     with open(p, newline="", encoding="utf-8-sig") as f:
         r = csv.DictReader(f)
