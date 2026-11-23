@@ -31,7 +31,7 @@ def rendre(e, quand):
     else:
         h.append("<p class='vide'>Aucune journée saisie pour l'instant : le tableau et les courbes « réel » se rempliront au fil des saisies.</p>")
     # suivi réel contre plan
-    h.append("<h2 id='stock'>Stock : réel et plan</h2>" + graphe_stock(e, h=300, w=1000) +
+    h.append("<h2 id='stock'>Stock : réel et plan</h2>" + graphe_stock(e, h=300, w=640) +
              "<p class='petit'>Si la courbe réelle passe plus de 50 bûches sous le plan, ou sous la réserve : ne garder que les événements (règle 5).</p>")
     c = e["courbe"]; par = {s["date"]: s for s in S}
     cum_r, cum, vals_r = 0.0, [], []
@@ -52,12 +52,12 @@ def rendre(e, quand):
     h.append("<h2 id='valeur'>Valeur évitée cumulée : réel et projection</h2>" +
              svg.series([dfr(x["date"]) for x in c], [
                  {"nom": "Projection (plan, hors prime)", "valeurs": cum, "couleur": "plan", "pointille": True, "points": False},
-                 {"nom": "Réel (hors prime d'événement)", "valeurs": vals_r, "couleur": "vert", "points": False, "epaisseur": 3}], titre_g="$", h=260, w=1000, auj=auj) +
+                 {"nom": "Réel (hors prime d'événement)", "valeurs": vals_r, "couleur": "vert", "points": False, "epaisseur": 3}], titre_g="$", h=280, w=640, auj=auj) +
              "<p class='petit'>La prime d'événement réelle n'est pas encore mesurée (il faudrait les kWh horaires des jours d'événement).</p>")
     if S:
         h.append("<h2 id='kwh'>kWh réels et attendus</h2>" + svg.series([dfr(s["date"]) for s in S], [
             {"nom": "kWh réels", "valeurs": [s["kwh"] for s in S], "couleur": "reel"},
-            {"nom": "kWh attendus (modèle, météo du jour et bûches)", "valeurs": [s["attendu"] for s in S], "couleur": "sansfeu", "pointille": True}], titre_g="kWh", h=240, w=1000))
+            {"nom": "kWh attendus (modèle, météo du jour et bûches)", "valeurs": [s["attendu"] for s in S], "couleur": "sansfeu", "pointille": True}], titre_g="kWh", h=260, w=640))
     h.append("<h2 id='saisir'>Comment saisir</h2><ol>"
              "<li><b>Le plus simple</b> : écrire à l'agent « hier 8 bûches, 62 kWh », ou plusieurs jours d'un coup (« le 20 : 6 bûches, 71 kWh ; le 21 : 0, 65 »). "
              "Il ajoute les lignes, régénère, vérifie, puis fait <b>un commit par saisie</b> ; le site se met à jour en une minute environ.</li>"
@@ -68,7 +68,7 @@ def rendre(e, quand):
              "<li>Vérifier et publier : <code>python outils/preparer_donnees.py</code> (valide la saisie : une erreur bloque) puis <code>python outils/generer_site.py</code>, "
              "<code>git commit</code>, <code>git push</code>.</li>"
              "<li>Une valeur inconnue reste vide : on n'invente jamais un chiffre. Les jours sans ligne apparaissent en ✕ à partir du "
-             f"{dfr(sa['debut_suivi'])}.</li></ol>")
+             f"{dfr(sa['debut_suivi'])}</li></ol>")
     page("journal.html", f"Journal · {sa['titre']}", "".join(h), quand,
          sous=f"<p class='sous'>Toutes les journées saisies, mises à jour le {E(quand)}. Fichier : <a href='data/{E(sa['saisie'])}'>data/{E(sa['saisie'])}</a>.</p>",
          contexte=f"{sa['titre']} · journal")
