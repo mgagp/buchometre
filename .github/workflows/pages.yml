@@ -2,13 +2,16 @@ name: Publier le site
 
 # Construit et publie le Bûchomètre :
 #  - à chaque push sur main (saisie, code, thème) ;
-#  - chaque matin : cron « 30 11 * * * » = 11 h 30 UTC, soit 6 h 30 à Toronto en heure normale (UTC−5, nov. → mars)
-#    et 7 h 30 en heure avancée (UTC−4). GitHub ne gère pas les fuseaux : on vise l'hiver, la saison qui compte.
-#    Le déclenchement planifié peut avoir de 5 à 30 min de retard ; GitHub le suspend après 60 jours sans activité
-#    dans le dépôt (les saisies suffisent à l'éviter) ;
-#  - à la main (workflow_dispatch).
-# La reconstruction du matin ne fait aucun commit : elle télécharge météo, prévision et événements Hydro-Québec
-# (--maj) pour cette construction seulement. Si un téléchargement échoue, on garde les fichiers versionnés de sources/.
+#  - chaque matin : cron « 30 11 * * * » = 11 h 30 UTC, soit 6 h 30 à Toronto en heure normale (UTC−5, nov. → mi-mars)
+#    et 7 h 30 en heure avancée (UTC−4, dès le 14 mars 2027). GitHub ne gère pas les fuseaux. Le déclenchement planifié
+#    peut avoir du retard (souvent 5 à 30 min, parfois plus) ; GitHub le suspend après 60 jours sans activité ;
+#  - à la main (workflow_dispatch), qui se comporte comme le cron.
+# Chaque construction télécharge météo, prévisions (Environnement Canada, Open-Meteo) et événements Hydro-Québec (--maj)
+# pour elle seule ; si un téléchargement échoue, on garde les fichiers versionnés de sources/ (mode ouvert, affiché).
+# Le cron et le lancement manuel enregistrent en plus la recommandation du jour dans data/recommandations_AAAA-AAAA.csv
+# et la commitent (un commit par jour au plus, aucun si la ligne du jour existe déjà), identité github-actions[bot],
+# avec GITHUB_TOKEN. Un push fait avec GITHUB_TOKEN ne relance aucun workflow : pas de boucle ; le déploiement se fait
+# dans cette même exécution.
 
 on:
   push:
@@ -18,13 +21,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # commit quotidien de la recommandation
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false   # une saisie poussée pendant la construction du matin attend au lieu de l'annuler
 
 jobs:
   construire:
@@ -43,10 +46,28 @@ jobs:
             git checkout -- sources data && rm -f sources/maj_statut.json
             python outils/preparer_donnees.py
           fi
+      - name: Enregistrer la recommandation du jour (cron et lancement manuel)
+        if: github.event_name != 'push'
+        run: python outils/enregistrer_recommandation.py
       - name: Générer le site
         run: python outils/generer_site.py
       - name: Vérifier les liens et l'absence de couleurs codées en dur
         run: python outils/verifier_site.py
+      - name: Commit quotidien de la recommandation (data/recommandations_*.csv seulement)
+        if: github.event_name != 'push'
+        run: |
+          if [ -z "$(git status --porcelain -- 'data/recommandations_*.csv')" ]; then
+            echo "Recommandation du jour déjà versionnée : aucun commit."; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898099+github-actions[bot]@users.noreply.github.com"
+          git add -- 'data/recommandations_*.csv'
+          git commit -q -m "Recommandation du $(date +%F) (automatique)"
+          for essai in 1 2 3; do
+            git push -q origin HEAD:main && exit 0
+            git pull -q --rebase --autostash origin main
+          done
+          echo "::warning::Commit de la recommandation non poussé ; le site est quand même publié."
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
