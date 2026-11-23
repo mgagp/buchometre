@@ -25,6 +25,7 @@ explicite), **Proposée** (en attente de Marc), **Remplacée par …** (on garde
 | 2026-11-23 | [Plan recalculé sur la météo réelle, projection jusqu'au 31 mars](2026-11-23-plan-sur-meteo-reelle.md) | Hypothèse |
 | 2026-11-23 | [Publier le projet sur GitHub Pages sous le nom buchometre](2026-11-23-publication-github-pages.md) | Acceptée |
 | 2026-11-23 | [Relooking après la restructuration, limité au thème](2026-11-23-relooking-apres-restructuration.md) | Acceptée |
+| 2026-11-23 | [Identité visuelle : camp de bûcherons cartoon](2026-11-23-identite-camp-bucherons.md) | Acceptée |
 | 2026-11-23 | [Recommandation canonique dans le dépôt](2026-11-23-recommandation-canonique.md) | Acceptée |
 | 2026-11-23 | [Restructurer le site en mode saison](2026-11-23-restructuration-mode-saison.md) | Acceptée |
 | 2026-11-23 | [Un commit par saisie, sans pull request](2026-11-23-un-commit-par-saisie.md) | Acceptée |
