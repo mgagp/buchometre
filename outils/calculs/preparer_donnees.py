@@ -269,7 +269,8 @@ def mettre_a_jour_sources():
                           "&daily=temperature_2m_mean,temperature_2m_min,temperature_2m_max,wind_speed_10m_max&timezone=America%2FToronto",
                           S("meteo_open-meteo_vaudreuil_2023-2026.json"), _json_daily),
         "prevision": ("https://api.open-meteo.com/v1/forecast?" + lat_lon +
-                      "&daily=temperature_2m_mean,temperature_2m_min,temperature_2m_max&timezone=America%2FToronto&past_days=2&forecast_days=7",
+                      "&daily=temperature_2m_mean,temperature_2m_min,temperature_2m_max&hourly=temperature_2m"
+                      "&timezone=America%2FToronto&past_days=2&forecast_days=7",
                       S("prevision_open-meteo.json"), _json_daily),
         "prevision_ec": (EC_URL, S(EC_FICHIER), _json_ec),
         "evenements_hq": ("https://donnees.hydroquebec.com/api/explore/v2.1/catalog/datasets/evenements-pointe/exports/csv?delimiter=%3B",

@@ -218,10 +218,17 @@ def etat(saison, aujourd_hui=None):
                  "a_saisir": (s is None and d >= debut_suivi), "recommande": h}
         else:
             j = meteo.get(d) or ({"t": t, "coeur": False, "creux": False} if t is not None else None)
+            if j is not None:
+                suiv = PV["jours"].get(d + J) or {}
+                hs = info.get("heure_min_suivante")
+                j = dict(j, tmax=info.get("tmax"), tmin_nuit=suiv.get("tmin"),
+                         creux_soir=bool(hs and hs["a"].date() == d and hs["a"].hour >= 18))
             v = RG.recommander(d, j, plages.get(d, []), st_, reserve(d), ecart_plan, P, saison, frein)
             st_ -= v["buches"]
             v["verdict"] = verdict(v)
-        v.update({"date": d, "t": t, "tmin": info.get("tmin"), "tmax": info.get("tmax"), "prevision": est_prev,
+        hm = info.get("heure_min") if d >= vrai_auj else (
+            {"a": dt.datetime.fromisoformat(info["heure_min"]), "t": None, "source": meteo_obs.SRC_HORAIRE} if info.get("heure_min") else None)
+        v.update({"date": d, "t": t, "tmin": info.get("tmin"), "tmax": info.get("tmax"), "heure_min": hm, "prevision": est_prev,
                   "source": src, "evt": len(EV.get(d, [])), "plages": plages.get(d, []),
                   "coeur": bool(meteo.get(d, {}).get("coeur")), "creux": bool(meteo.get(d, {}).get("creux"))})
         reco.append(v)
@@ -252,7 +259,8 @@ def etat(saison, aujourd_hui=None):
         mo = M.get(d) if d < vrai_auj else None
         if mo:
             fr = lambda x: f"{x:.1f}".replace(".", ",")
-            info = f"{d.isoformat()} · min {fr(mo['tmin'])}, max {fr(mo['tmax'])}, moy. {fr(mo['t'])} °C ({src})"
+            hmo = f" vers {int(mo['heure_min'][11:13])} h" if mo.get("heure_min") and mo["heure_min"][:10] == d.isoformat() else ""
+            info = f"{d.isoformat()} · min {fr(mo['tmin'])}{hmo}, max {fr(mo['tmax'])}, moy. {fr(mo['t'])} °C ({src})"
         else:
             info = f"{d.isoformat()}" + (f" · {t:.1f} °C".replace(".", ",") if t is not None else "") + (f" (prévision {src})" if est_prev else "")
         if meteo.get(d, {}).get("coeur"):
@@ -344,13 +352,16 @@ def pour_routine(e):
     a = e["reco"][1]; s = e["stock"]; pv = e["prevision"]; h = e["reco"][0]
     jours = []
     for k, r in zip(("hier", "aujourd'hui", "demain", "après-demain"), e["reco"]):
+        hm = r.get("heure_min")
         j = {"jour": k, "date": r["date"], "t_moy": None if r["t"] is None else round(r["t"], 1),
-             "t_min": r["tmin"], "t_max": r["tmax"], "source": r["source"], "evenement": " et ".join(r["plages"]) or None}
+             "t_min": r["tmin"], "t_max": r["tmax"], "source": r["source"], "evenement": " et ".join(r["plages"]) or None,
+             "heure_min": hm["a"].strftime("%Y-%m-%dT%H:%M") if hm else None, "heure_min_source": hm["source"] if hm else None}
         if k == "hier":
             j.update({"buches_saisies": r["buches"], "kwh_saisis": r["kwh"], "a_saisir": r["a_saisir"],
                       "recommande": (r["recommande"] or {}).get("recommandation")})
         else:
-            j.update({"recommandation": r["verdict"], "buches": r["buches"], "moment": r["moment"] or None, "raison": r["raison"]})
+            j.update({"recommandation": r["verdict"], "buches": r["buches"], "moment": r["moment"] or None, "raison": r["raison"],
+                      "plan_feu": r.get("plan")})
         jours.append(j)
     alertes = []
     if pv["source"] is None:
@@ -368,6 +379,8 @@ def pour_routine(e):
     return _conv({
         "genere_le": dt.datetime.now().astimezone().isoformat(timespec="minutes"), "date": a["date"],
         "recommandation": a["verdict"], "buches": a["buches"], "moment": a["moment"] or None, "raison": a["raison"], "regle": a["regle"] or None,
+        "t_min": a["tmin"], "t_max": a["tmax"], "heure_min": jours[1]["heure_min"], "heure_min_source": jours[1]["heure_min_source"],
+        "plan_feu": a.get("plan"),
         "evenement": a["evenement"] or None, "source_meteo": pv["source"], "prevision_emise": pv["ec_emis"] if pv["source"] == prevision.EC else pv["om_quand"],
         "jours": jours, "creux": creux,
         "stock": {"actuel": round(s["actuel"]), "au": s["date_reference"], "reserve": round(s["reserve"]),

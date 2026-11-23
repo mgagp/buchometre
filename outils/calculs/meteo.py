@@ -6,7 +6,11 @@ Environnement Canada, données climatiques quotidiennes (API GeoMet, collection 
   3. dernier repli : Open-Meteo (archive, modèle ECMWF IFS), étiqueté « estimation par modèle », jamais présenté comme une mesure.
 Moyenne quotidienne = (max + min) / 2, la définition d'EC.
 
-Fichiers (même format : date, station, min, max, moyenne, source) :
+Heure du minimum (affichage seulement, issue #10) : l'heure la plus froide des relevés horaires d'EC (« climate-hourly »)
+de la même station, sur la journée climatologique (1 h → minuit, heure normale de l'Est), convertie à l'heure de Toronto ;
+vide si les relevés horaires manquent (station de repli sans horaire, modèle, ou plus de 4 heures absentes).
+
+Fichiers (date, station, min, max, moyenne, source, heure_min ; heure_min est vide dans l'historique 2023-2026) :
   - sources/meteo_ec_2023-2026.csv : 1er juill. 2023 → 30 juin 2026, téléchargé une fois (python outils/calculs/meteo.py --historique) ;
   - data/meteo_observee_AAAA-AAAA.csv : la saison (à partir du 1er juill.), versionné ; chaque matin, --maj retélécharge
     les 30 derniers jours et accepte les révisions d'EC (le changement se voit dans le commit quotidien).
@@ -18,7 +22,10 @@ from chemins import DATA, SOURCES
 API = "https://api.weather.gc.ca/collections/climate-daily/items"
 STATIONS = [("702FHL8", "Ste-Anne-de-Bellevue 1"), ("7025251", "Montréal-Trudeau")]
 SRC_EC, SRC_MODELE = "EC climate-daily (mesure)", "Open-Meteo (estimation par modèle)"
-COLS = ["date", "station", "min", "max", "moyenne", "source"]
+COLS = ["date", "station", "min", "max", "moyenne", "source", "heure_min"]
+API_HORAIRE = "https://api.weather.gc.ca/collections/climate-hourly/items"
+SRC_HORAIRE = "EC climate-hourly"
+LST = dt.timezone(dt.timedelta(hours=-5))  # les données climatiques d'EC sont en heure normale de l'Est, toute l'année
 HISTORIQUE = "meteo_ec_2023-2026.csv"
 LIBELLE = "Environnement Canada, Ste-Anne-de-Bellevue 1 (repli : Montréal-Trudeau)"
 JOURS_REVISES = 30
@@ -45,6 +52,31 @@ def _ec(climate_id, debut, fin):
     return out
 
 
+def _horaire(climate_id, debut, fin):
+    """{date: « AAAA-MM-JJTHH:MM » (heure de Toronto) de la température horaire la plus basse} pour une station EC."""
+    a = dt.datetime.combine(debut, dt.time(0)) - dt.timedelta(hours=6)
+    b = dt.datetime.combine(fin + dt.timedelta(days=1), dt.time(0)) + dt.timedelta(hours=6)
+    url = (f"{API_HORAIRE}?f=json&CLIMATE_IDENTIFIER={climate_id}&datetime={a.isoformat()}Z/{b.isoformat()}Z"
+           "&properties=LOCAL_DATE,TEMP&limit=10000")
+    req = urllib.request.Request(url, headers={"User-Agent": "buchometre (github.com/mgagp/buchometre)"})
+    with urllib.request.urlopen(req, timeout=90) as r:
+        fs = json.load(r)["features"]
+    par_jour = {}
+    for f in fs:
+        p = f["properties"]
+        if p.get("TEMP") is None:
+            continue
+        t = dt.datetime.fromisoformat(p["LOCAL_DATE"])           # heure normale de l'Est
+        jour = (t - dt.timedelta(hours=1)).date()               # journée climatologique : 1 h → minuit (24 h)
+        par_jour.setdefault(jour, []).append((float(p["TEMP"]), t))
+    out = {}
+    for jour, v in par_jour.items():
+        if debut <= jour <= fin and len(v) >= 20:
+            _, t = min(v)
+            out[jour] = t.replace(tzinfo=LST).astimezone().replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M")
+    return out
+
+
 def _modele():
     """Open-Meteo (archive, versionnée dans sources/) : {date: (min, max)}."""
     p = os.path.join(SOURCES, "meteo_open-meteo_vaudreuil_2023-2026.json")
@@ -58,6 +90,12 @@ def _modele():
 def lignes(debut, fin):
     """Télécharge et choisit, jour par jour, la meilleure source (EC Ste-Anne, EC Trudeau, modèle)."""
     par_station = [(cid, nom, _ec(cid, debut, fin)) for cid, nom in STATIONS]
+    horaire = {}
+    for cid, _ in STATIONS:
+        try:
+            horaire[cid] = _horaire(cid, debut, fin)
+        except Exception:  # l'heure du min est un plus : son absence n'empêche pas la mise à jour
+            horaire[cid] = {}
     om = _modele()
     out = []
     d = debut
@@ -65,12 +103,13 @@ def lignes(debut, fin):
         for cid, nom, v in par_station:
             if d in v:
                 a, b, m = v[d]
-                out.append({"date": d.isoformat(), "station": f"{nom} ({cid})", "min": a, "max": b, "moyenne": m, "source": SRC_EC})
+                out.append({"date": d.isoformat(), "station": f"{nom} ({cid})", "min": a, "max": b, "moyenne": m, "source": SRC_EC,
+                            "heure_min": horaire.get(cid, {}).get(d, "")})
                 break
         else:
             if d in om:
                 a, b = om[d]
-                out.append({"date": d.isoformat(), "station": "Open-Meteo 45,40 N −74,03 O", "min": a, "max": b, "moyenne": moyenne(a, b), "source": SRC_MODELE})
+                out.append({"date": d.isoformat(), "station": "Open-Meteo 45,40 N −74,03 O", "min": a, "max": b, "moyenne": moyenne(a, b), "source": SRC_MODELE, "heure_min": ""})
         d += dt.timedelta(days=1)
     return out
 
@@ -129,10 +168,11 @@ def observee():
     for p in fichiers:
         for k, r in _lire(p).items():
             out[dt.date.fromisoformat(k)] = {"t": float(r["moyenne"]), "tmin": float(r["min"]), "tmax": float(r["max"]),
-                                            "station": r["station"], "source": r["source"], "mesure": r["source"] == SRC_EC}
+                                            "station": r["station"], "source": r["source"], "mesure": r["source"] == SRC_EC,
+                                            "heure_min": r.get("heure_min") or None}
     for d, (a, b) in _modele().items():
         if d not in out:
-            out[d] = {"t": moyenne(a, b), "tmin": a, "tmax": b, "station": "Open-Meteo 45,40 N −74,03 O", "source": SRC_MODELE, "mesure": False}
+            out[d] = {"t": moyenne(a, b), "tmin": a, "tmax": b, "station": "Open-Meteo 45,40 N −74,03 O", "source": SRC_MODELE, "mesure": False, "heure_min": None}
     return out
 
 
