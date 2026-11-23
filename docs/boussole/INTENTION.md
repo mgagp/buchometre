@@ -1,6 +1,6 @@
 # Intention du projet
 
-*État au 23 novembre 2026, après la restructuration en mode saison. Modifier seulement quand Marc change d'avis, et le noter par une décision.*
+*État au 23 novembre 2026, après l'étape 2 (le temps qui avance). Modifier seulement quand Marc change d'avis, et le noter par une décision.*
 
 ## Pourquoi le Bûchomètre existe
 Marc chauffe une maison de Vaudreuil-Dorion (Québec) au bois et à l'électricité. Depuis 2026, il est au tarif
@@ -67,6 +67,6 @@ a payé en fin de saison.
 | Inventaire mesuré de la pile (876 bûches) et règles assouplies | 22 nov. 2026 | Fait |
 | Publication publique sur GitHub Pages (jalon 1) | 23 nov. 2026 | Faite |
 | Restructuration en mode saison : accueil tableau de bord, 5 menus, archives, régénération chaque matin | 23 nov. 2026 | Faite (issue #4) |
-| Le temps qui avance : calendrier complet, historique des recommandations, plan sur la météo réelle | après la restructuration | À faire |
+| Le temps qui avance : recommandation canonique (Environnement Canada, creux froids), historique par commit quotidien, plan sur la météo réelle | 23 nov. 2026 | Faite (issue #6) |
 | Identité visuelle québécoise (jalon 2), limitée au thème | après la restructuration | À faire |
 | Généralisation légère : une saison de plus sans toucher au code (jalon 3) | avant l'hiver 2027-28 | À faire |
