@@ -10,6 +10,7 @@ import csv, json, os, sys, math, statistics as st, datetime as dt
 from chemins import RACINE
 from calculs import inventaire
 from calculs.saisons import courante
+from calculs import recommandation as RG
 SAISON = courante()
 INV = inventaire.calculer()
 
@@ -164,29 +165,16 @@ def analyser(ecrire=True):
     creux = []
     for nom in HIVERS:
         js = [j for j in jours if j["hiver"] == nom and dans(j, crit_deb - 14, crit_fin + 14)]
-        run = []
-        def fermer(run):
-            if len(run) >= 2:
-                cid = f"{nom[:4]}-{len([c for c in creux if c['hiver'] == nom]) + 1:02d}"
-                coeur = [j for j in run if j["t"] <= j["base"] + H["seuil_coeur"]]
-                for j in run:
-                    j["creux"] = cid; j["coeur"] = j in coeur
-                jm = min(run, key=lambda j: j["t"])
-                creux.append({"id": cid, "hiver": nom, "debut": run[0]["date"].isoformat(), "fin": run[-1]["date"].isoformat(),
-                              "jours": len(run), "jours_coeur": len(coeur), "t_min_jour": round(jm["t"], 1), "date_min": jm["date"].isoformat(),
-                              "t_moy": round(sum(j["t"] for j in run) / len(run), 1), "dj": round(sum(j["dj"] for j in run), 1),
-                              "evt": sum(j["evt"] for j in run), "dans_critique": any(dans(j, crit_deb, crit_fin) for j in run)})
-        trou = 0
-        for j in js:
-            if j["anom"] <= H["seuil_creux"]:
-                run.append(j); trou = 0
-            elif run and trou == 0 and j["anom"] <= 0:
-                trou = 1; run.append(j)  # tolère un jour de répit
-            else:
-                if run and run[-1]["anom"] > H["seuil_creux"]:
-                    run.pop()
-                fermer(run); run = []; trou = 0
-        fermer(run)
+        for run in RG.creux(js, H):  # même détection que pour la prévision (calculs/recommandation.py)
+            cid = f"{nom[:4]}-{len([c for c in creux if c['hiver'] == nom]) + 1:02d}"
+            coeur = [j for j in run if j["coeur"]]
+            for j in run:
+                j["creux"] = cid
+            jm = min(run, key=lambda j: j["t"])
+            creux.append({"id": cid, "hiver": nom, "debut": run[0]["date"].isoformat(), "fin": run[-1]["date"].isoformat(),
+                          "jours": len(run), "jours_coeur": len(coeur), "t_min_jour": round(jm["t"], 1), "date_min": jm["date"].isoformat(),
+                          "t_moy": round(sum(j["t"] for j in run) / len(run), 1), "dj": round(sum(j["dj"] for j in run), 1),
+                          "evt": sum(j["evt"] for j in run), "dans_critique": any(dans(j, crit_deb, crit_fin) for j in run)})
     stats_creux = {}
     for nom in HIVERS:
         cs = [c for c in creux if c["hiver"] == nom and c["dans_critique"]]
@@ -300,17 +288,9 @@ def analyser(ecrire=True):
         plan, st_, courbe = {}, stock, []
         for j in js:
             reserve = H["regle_buches_evt"] * H["evts_attendus"] * part_apres(jour_saison(j["date"]))
-            n = 0
-            if j["nevt"]:
-                n = min(n_evt_jour(j), st_)
-            elif j.get("coeur") and j["t"] <= rp["seuil"] and dans(j, crit_deb, crit_fin):
-                v = min(plafond(j["dj"]), rp["max"])
-                if st_ - v >= reserve:
-                    n = v
-            elif j["date"].strftime("%m-%d") >= rp["liberation"] and j["date"].month <= 3 and j["t"] <= 0:
-                v = min(plafond(j["dj"]), rp["max"])
-                if st_ - v >= reserve:
-                    n = v
+            # règle de budget canonique (calculs/recommandation.py)
+            n, _ = RG.decider(j["nevt"], j["dj"], j["t"], j.get("coeur"), dans(j, crit_deb, crit_fin),
+                              RG.apres_liberation(j["date"], rp["liberation"]), st_, reserve, H, kb, cdj, rp)
             plan[j["date"]] = n; st_ -= n
             courbe.append((j["date"].isoformat(), round(st_), round(reserve)))
         return plan, courbe
