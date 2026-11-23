@@ -1,0 +1,11 @@
+# Mises à jour des actions GitHub seulement. Le projet n'a pas de dépendances pip
+# (Python, bibliothèque standard). Dependabot ouvrira une pull request quand une
+# action officielle change de version : exception étroite à la règle « pas de PR,
+# push direct sur main », limitée à ces mises à jour.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
