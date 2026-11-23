@@ -239,15 +239,22 @@ def _json_daily(p):
     assert d["time"] and d["temperature_2m_mean"], "réponse sans données quotidiennes"
 
 
+def _json_ec(p):
+    from calculs.prevision import lire_ec
+    assert lire_ec(p)[0], "bulletin d'Environnement Canada sans prévision lisible"
+
+
 def _csv_hq(p):
     lignes = open(p, encoding="utf-8-sig").read().splitlines()
     assert lignes and lignes[0].startswith("offre;datedebut"), "en-tête inattendu"
 
 
 def mettre_a_jour_sources():
-    """--maj : télécharge la météo Open-Meteo (archive 1er juil. 2023 → hier, et prévision 2 jours passés + 4 jours),
+    """--maj : télécharge la météo Open-Meteo (archive 1er juil. 2023 → hier, et prévision 2 jours passés + 7 jours),
+    la prévision d'Environnement Canada pour Vaudreuil-Dorion (source principale de la recommandation),
     et les événements de pointe HQ. Chaque source est indépendante ; un échec n'interrompt rien (fichiers versionnés gardés).
     L'état est écrit dans sources/maj_statut.json (non versionné) et affiché sur le site."""
+    from calculs.prevision import EC_URL, EC_FICHIER
     fin = (dt.date.today() - dt.timedelta(days=1)).isoformat()
     lat_lon = "latitude=45.40&longitude=-74.03"
     srcs = {
@@ -255,8 +262,9 @@ def mettre_a_jour_sources():
                           "&daily=temperature_2m_mean,temperature_2m_min,temperature_2m_max,wind_speed_10m_max&timezone=America%2FToronto",
                           S("meteo_open-meteo_vaudreuil_2023-2026.json"), _json_daily),
         "prevision": ("https://api.open-meteo.com/v1/forecast?" + lat_lon +
-                      "&daily=temperature_2m_mean,temperature_2m_min,temperature_2m_max&timezone=America%2FToronto&past_days=2&forecast_days=4",
+                      "&daily=temperature_2m_mean,temperature_2m_min,temperature_2m_max&timezone=America%2FToronto&past_days=2&forecast_days=7",
                       S("prevision_open-meteo.json"), _json_daily),
+        "prevision_ec": (EC_URL, S(EC_FICHIER), _json_ec),
         "evenements_hq": ("https://donnees.hydroquebec.com/api/explore/v2.1/catalog/datasets/evenements-pointe/exports/csv?delimiter=%3B",
                           S("hq_evenements_pointe.csv"), _csv_hq),
     }
