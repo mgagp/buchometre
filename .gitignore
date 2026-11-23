@@ -3,3 +3,7 @@ __pycache__/
 # Site généré par outils/generer_site.py (construit et publié par GitHub Actions)
 rapports/*
 !rapports/img/
+
+# État du dernier --maj (écrit en CI à chaque construction)
+sources/maj_statut.json
+sources/*.tmp

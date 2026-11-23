@@ -3,8 +3,25 @@ Chaque fonction renvoie une chaîne <svg>. Les infobulles passent par <title>.""
 import html, math
 
 E = html.escape
-COUL = {"reel": "#1565c0", "sansfeu": "#c62828", "marc": "#8e24aa", "buche": "#ef6c00", "temp": "#00838f",
-        "gris": "#9e9e9e", "vert": "#2e7d32", "fond_e": "#f3f3f3"}
+# Couleurs : aucune valeur ici. Chaque clé renvoie à une variable CSS --g-<clé> définie dans theme/site.css.
+CLES = ["reel", "sansfeu", "marc", "buche", "temp", "gris", "vert", "fond_e", "ardoise", "temp_pale", "encre", "gris_bleu", "gris_pale",
+        "bleu_pale", "violet_pale", "bleu_fonce", "evt", "plan", "reserve", "zone_creux", "zone_marc", "zone_critique", "cal_sansfeu",
+        "cal_extrapole", "pile_rect", "pile_pente", "pile_tri", "pile_trait", "axe"]
+COUL = {k: f"var(--g-{k})" for k in CLES}
+
+
+def coul(x):
+    """Clé de couleur (« reel ») ou valeur déjà résolue (« var(--g-reel) », « color-mix(...) ») → valeur CSS."""
+    if x in COUL:
+        return COUL[x]
+    if x.startswith(("var(", "color-mix(")) or x == "none":
+        return x
+    raise ValueError(f"couleur codée en dur interdite (utiliser une clé du thème) : {x}")
+
+
+def intensite(cle, r):
+    """Teinte d'une clé du thème à r (0..1) d'opacité, sans couleur codée en dur."""
+    return f"color-mix(in srgb, {coul(cle)} {max(0, min(1, r)) * 100:.0f}%, transparent)"
 
 
 def _echelle(vmin, vmax, n=5):
@@ -25,7 +42,7 @@ def fmt(v):
     return s.replace(",", " ").replace(".", ",")
 
 
-def series(labels, series, h=300, w=1100, titre_g="", titre_d="", zones=(), etiq_tous=7, liens=None):
+def series(labels, series, h=300, w=1100, titre_g="", titre_d="", zones=(), etiq_tous=7, liens=None, auj=None, auj_lib="aujourd'hui"):
     """labels : liste de str (axe x). series : dicts {nom, valeurs, couleur, type: line|bar|area, axe: g|d, pointille}.
     zones : liste (i_debut, i_fin, libellé) ombrées. liens : liste d'URL par point (barres cliquables)."""
     ml, mr, mt, mb = 52, 52, 26, 46
@@ -43,8 +60,8 @@ def series(labels, series, h=300, w=1100, titre_g="", titre_d="", zones=(), etiq
         lo, hi, _ = b; return mt + ph - (v - lo) / (hi - lo) * ph
     o = [f"<svg viewBox='0 0 {w} {h}' class='graphe' role='img' xmlns='http://www.w3.org/2000/svg'>"]
     for z in zones:
-        i0, i1, lib = z[:3]; zc = z[3] if len(z) > 3 else COUL['fond_e']
-        o.append(f"<rect x='{ml + bw * i0:.1f}' y='{mt}' width='{bw * (i1 - i0 + 1):.1f}' height='{ph}' fill='{zc}'><title>{E(lib)}</title></rect>"
+        i0, i1, lib = z[:3]; zc = z[3] if len(z) > 3 else 'fond_e'
+        o.append(f"<rect x='{ml + bw * i0:.1f}' y='{mt}' width='{bw * (i1 - i0 + 1):.1f}' height='{ph}' style='fill:{coul(zc)}'><title>{E(lib)}</title></rect>"
                  + (f"<text x='{ml + bw * (i0 + i1 + 1) / 2:.1f}' y='{mt + 14}' text-anchor='middle' class='ax'>{E(lib)}</text>" if len(z) < 5 or z[4] else ""))
     if bg:
         for t in bg[2]:
@@ -54,7 +71,7 @@ def series(labels, series, h=300, w=1100, titre_g="", titre_d="", zones=(), etiq
         for t in bd[2]:
             y = Y(t, bd); o.append(f"<text x='{ml + pw + 6}' y='{y + 4:.1f}' class='ax'>{fmt(t)}</text>")
     if bg and bg[0] < 0 < bg[1]:
-        y = Y(0, bg); o.append(f"<line x1='{ml}' x2='{ml + pw}' y1='{y:.1f}' y2='{y:.1f}' stroke='#555'/>")
+        y = Y(0, bg); o.append(f"<line x1='{ml}' x2='{ml + pw}' y1='{y:.1f}' y2='{y:.1f}' class='axe0'/>")
     pas = max(1, round(n / (pw / 60)))
     for i, l in enumerate(labels):
         if i % pas == 0:
@@ -70,7 +87,7 @@ def series(labels, series, h=300, w=1100, titre_g="", titre_d="", zones=(), etiq
                 continue
             y0, y1 = Y(0, b), Y(v, b)
             r = (f"<rect x='{ml + bw * i + bw * 0.1 + k * larg:.1f}' y='{min(y0, y1):.1f}' width='{max(larg, 1):.1f}' "
-                 f"height='{abs(y0 - y1):.1f}' fill='{s['couleur']}' opacity='{s.get('opacite', 0.55)}'>"
+                 f"height='{abs(y0 - y1):.1f}' style='fill:{coul(s['couleur'])}' opacity='{s.get('opacite', 0.55)}'>"
                  f"<title>{E(labels[i])} – {E(s['nom'])} : {fmt(v)}</title></rect>")
             o.append(f"<a href='{E(liens[i])}'>{r}</a>" if liens else r)
     for s in series:
@@ -89,11 +106,14 @@ def series(labels, series, h=300, w=1100, titre_g="", titre_d="", zones=(), etiq
             pts = " ".join(f"{x:.1f},{y:.1f}" for x, y, _, _ in seg)
             if s.get("type") == "area":
                 y0 = Y(0, b)
-                o.append(f"<polygon points='{seg[0][0]:.1f},{y0:.1f} {pts} {seg[-1][0]:.1f},{y0:.1f}' fill='{s['couleur']}' opacity='0.18'/>")
-            o.append(f"<polyline points='{pts}' fill='none' stroke='{s['couleur']}' stroke-width='{s.get('epaisseur', 2)}'{dash}/>")
+                o.append(f"<polygon points='{seg[0][0]:.1f},{y0:.1f} {pts} {seg[-1][0]:.1f},{y0:.1f}' style='fill:{coul(s['couleur'])}' opacity='0.18'/>")
+            o.append(f"<polyline points='{pts}' fill='none' style='stroke:{coul(s['couleur'])}' stroke-width='{s.get('epaisseur', 2)}'{dash}/>")
             if s.get("points", n <= 60):
                 for x, y, i, v in seg:
-                    o.append(f"<circle cx='{x:.1f}' cy='{y:.1f}' r='2.6' fill='{s['couleur']}'><title>{E(labels[i])} – {E(s['nom'])} : {fmt(v)}</title></circle>")
+                    o.append(f"<circle cx='{x:.1f}' cy='{y:.1f}' r='2.6' style='fill:{coul(s['couleur'])}'><title>{E(labels[i])} – {E(s['nom'])} : {fmt(v)}</title></circle>")
+    if auj is not None and 0 <= auj < n:
+        o.append(f"<line x1='{X(auj):.1f}' x2='{X(auj):.1f}' y1='{mt - 4}' y2='{mt + ph}' class='ligne-auj'/>"
+                 f"<text x='{X(auj) + 4:.1f}' y='{mt + 8}' class='ax b'>{E(auj_lib)}</text>")
     o.append(legende(series, ml, h - 10))
     o.append("</svg>")
     return "".join(o)
@@ -104,7 +124,7 @@ def legende(series, x, y):
     for s in series:
         if s.get("sans_legende"):
             continue
-        o.append(f"<rect x='{cx}' y='{y - 9}' width='12' height='10' fill='{s['couleur']}' opacity='{0.6 if s.get('type') == 'bar' else 1}'/>"
+        o.append(f"<rect x='{cx}' y='{y - 9}' width='12' height='10' style='fill:{coul(s['couleur'])}' opacity='{0.6 if s.get('type') == 'bar' else 1}'/>"
                  f"<text x='{cx + 16}' y='{y}' class='ax'>{E(s['nom'])}</text>")
         cx += 30 + 6.3 * len(s["nom"])
     return "".join(o)
@@ -127,11 +147,11 @@ def nuage(groupes, lignes=(), h=360, w=540, tx="", ty="", xlim=None, ylim=None):
              f"<text x='12' y='{mt + ph / 2}' transform='rotate(-90 12 {mt + ph / 2})' text-anchor='middle' class='ax b'>{E(ty)}</text>")
     for g in groupes:
         for x, y, info in g["points"]:
-            o.append(f"<circle cx='{X(x):.1f}' cy='{Y(y):.1f}' r='4' fill='{g['couleur']}' opacity='0.7'><title>{E(info)}</title></circle>")
+            o.append(f"<circle cx='{X(x):.1f}' cy='{Y(y):.1f}' r='4' style='fill:{coul(g['couleur'])}' opacity='0.7'><title>{E(info)}</title></circle>")
     for l in lignes:
         pts = [(l["x0"] + (l["x1"] - l["x0"]) * k / 20) for k in range(21)]
-        o.append("<polyline fill='none' stroke='{}' stroke-width='2' {} points='{}'/>".format(
-            l["couleur"], "stroke-dasharray='6 4'" if l.get("pointille") else "",
+        o.append("<polyline fill='none' style='stroke:{}' stroke-width='2' {} points='{}'/>".format(
+            coul(l["couleur"]), "stroke-dasharray='6 4'" if l.get("pointille") else "",
             " ".join(f"{X(x):.1f},{Y(l['f'](x)):.1f}" for x in pts)))
     o.append(legende([{"nom": g["nom"], "couleur": g["couleur"]} for g in groupes] + list(lignes), ml, h - 6))
     o.append("</svg>")
@@ -155,7 +175,7 @@ def calendrier(jours, valeur, couleur, info, lien, vmax=None):
         if (d.year, d.month) not in mois_vus and d.day <= 7:
             mois_vus.add((d.year, d.month)); o.append(f"<text x='{ml + s * c}' y='{mt - 8}' class='ax'>{d.strftime('%Y-%m')}</text>")
         v = valeur(j); fill = couleur(j, v / vmax)
-        o.append(f"<a href='{E(lien(j))}'><rect x='{ml + s * c}' y='{mt + k * c}' width='{c - 2}' height='{c - 2}' rx='2' fill='{fill}'>"
+        o.append(f"<a href='{E(lien(j))}'><rect x='{ml + s * c}' y='{mt + k * c}' width='{c - 2}' height='{c - 2}' rx='2' style='fill:{coul(fill)}'>"
                  f"<title>{E(info(j))}</title></rect></a>")
     o.append("</svg>")
     return "".join(o)
@@ -170,10 +190,10 @@ def courbes(lignes, h=320, w=540, tx="", ty=""):
     for t in range(0, 101, 20):
         o.append(f"<line x1='{ml}' x2='{ml + pw}' y1='{Y(t / 100):.1f}' y2='{Y(t / 100):.1f}' class='grille'/><text x='{ml - 6}' y='{Y(t / 100) + 4:.1f}' text-anchor='end' class='ax'>{t} %</text>"
                  f"<text x='{X(t / 100):.1f}' y='{mt + ph + 16}' text-anchor='middle' class='ax'>{t} %</text>")
-    o.append(f"<line x1='{X(0)}' y1='{Y(0)}' x2='{X(1)}' y2='{Y(1)}' stroke='#bbb' stroke-dasharray='4 4'/>")
+    o.append(f"<line x1='{X(0)}' y1='{Y(0)}' x2='{X(1)}' y2='{Y(1)}' class='diag'/>")
     o.append(f"<text x='{ml + pw / 2}' y='{h - 24}' text-anchor='middle' class='ax b'>{E(tx)}</text>"
              f"<text x='12' y='{mt + ph / 2}' transform='rotate(-90 12 {mt + ph / 2})' text-anchor='middle' class='ax b'>{E(ty)}</text>")
     for l in lignes:
-        o.append(f"<polyline fill='none' stroke='{l['couleur']}' stroke-width='2' points='" + " ".join(f"{X(x):.1f},{Y(y):.1f}" for x, y in l["pts"]) + "'/>")
+        o.append(f"<polyline fill='none' style='stroke:{coul(l['couleur'])}' stroke-width='2' points='" + " ".join(f"{X(x):.1f},{Y(y):.1f}" for x, y in l["pts"]) + "'/>")
     o.append(legende(lignes, ml, h - 6)); o.append("</svg>")
     return "".join(o)

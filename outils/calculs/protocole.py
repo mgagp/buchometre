@@ -7,11 +7,12 @@ data/protocole_simulation.csv, data/saisie_2026-2027_enrichie.csv.
 Bibliothèque standard seulement.
 """
 import csv, json, os, sys, math, statistics as st, datetime as dt
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import inventaire
+from chemins import RACINE
+from calculs import inventaire
+from calculs.saisons import courante
+SAISON = courante()
 INV = inventaire.calculer()
 
-RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 S = lambda *p: os.path.join(RACINE, "sources", *p)
 D = lambda *p: os.path.join(RACINE, "data", *p)
 EST = dt.timezone(dt.timedelta(hours=-5))
@@ -377,7 +378,7 @@ def analyser(ecrire=True):
 
     # ---------- saisie 2026-2027 ----------
     saisie = []
-    p = D("saisie_2026-2027.csv")
+    p = D(SAISON["saisie"])
     if os.path.exists(p):
         for r in csv.DictReader(open(p, encoding="utf-8-sig")):
             if not (r.get("date") or "").strip():
@@ -412,9 +413,7 @@ def analyser(ecrire=True):
         r["stock_restant"] = round(stk)
 
     # ---------- test : le rendement par bûche dépend-il du froid ? (interaction bûches × DJ, données 2023-24) ----------
-    import sys
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from preparer_donnees import mco
+    from calculs.preparer_donnees import mco
     jn = [r for r in csv.DictReader(open(D("journal_nettoye.csv"), encoding="utf-8")) if r["statut"] == "mesure"]
     inter = mco([[1, float(r["dj18"]), float(r["nb_buches"]), float(r["nb_buches"]) * float(r["dj18"])] for r in jn], [float(r["kwh_reel"]) for r in jn])
     inter["kwh_par_buche_selon_dj"] = {str(x): -(inter["coef"][2] + inter["coef"][3] * x) for x in (10, 15, 20, 25, 30, 35)}
@@ -441,7 +440,7 @@ def analyser(ecrire=True):
             w = csv.DictWriter(fo, list(sims[0].keys())); w.writeheader(); w.writerows(sims)
         cols = ["date", "buches", "stock_compte", "stock_restant", "kwh", "evenement_hq_saisi", "evenements_hq_donnees", "jour_temoin", "remarque", "t_moy", "dj18",
                 "kwh_attendu_modele", "kwh_sans_feu_modele", "kwh_evites_modele", "valeur_base", "ecart_kwh"]
-        with open(D("saisie_2026-2027_enrichie.csv"), "w", newline="", encoding="utf-8") as fo:
+        with open(D(SAISON["saisie_enrichie"]), "w", newline="", encoding="utf-8") as fo:
             w = csv.DictWriter(fo, cols); w.writeheader(); w.writerows(saisie)
     return out
 

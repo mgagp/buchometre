@@ -6,7 +6,7 @@ Bibliothèque standard seulement. Utilisé par protocole.py (stock initial) et g
 """
 import csv, os
 
-RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from chemins import RACINE
 FICHIER = os.path.join(RACINE, "data", "inventaire_pile_2026-11.csv")
 
 P = {
@@ -18,7 +18,7 @@ P = {
     "corde_face_pi2": 32.0,         # corde de face québécoise : 4 pi × 8 pi de face, bûches de 16 po
     "corde_pleine_pi3": 128.0,      # 4 × 4 × 8 pi
     "longueur_buche_po": 16,        # CONFIRMÉE par Marc le 2026-11-22
-    "rangees": 1,                   # présumé : une seule rangée vue de face — À CONFIRMER
+    "rangees": 1,                   # CONFIRMÉE par Marc (2026-11-22) : une seule rangée de profondeur ; les deux triangles du bas existent bien en deux exemplaires
     "fourchette_retenue": (876, 947),  # sensibilité à la densité 6,7 → 7,25 b/pi² (232 b/corde)
 }
 

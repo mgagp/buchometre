@@ -1,0 +1,13 @@
+{
+ "_note": "Une entrée par saison. « courante » = saison affichée à l'accueil. Pour 2027-2028 : ajouter une entrée de type « suivi », créer data/saisie_2027-2028.csv, changer « courante ». La saison précédente passe alors automatiquement dans Archives.",
+ "courante": "2026-2027",
+ "saisons": [
+  {"id": "2023-2024", "type": "chiffrier", "titre": "Hiver 2023-2024", "debut": "2023-11-07", "fin": "2024-03-31",
+   "resume": "Saison d'origine : chiffrier quotidien de Marc (bûches, kWh), modèle de 4,5 kWh évités par bûche."},
+  {"id": "2026-2027", "type": "suivi", "titre": "Saison 2026-2027", "debut": "2026-11-01", "fin": "2027-03-31",
+   "debut_suivi": "2026-12-01", "flex_d": ["2026-12-01", "2027-03-31"], "plafond_heures_evt": 120,
+   "saisie": "saisie_2026-2027.csv", "saisie_enrichie": "saisie_2026-2027_enrichie.csv",
+   "inventaire": "inventaire_pile_2026-11.csv", "plan_meteo": "2024-2025",
+   "resume": "Premier hiver au tarif Flex D ; stock mesuré de 876 bûches ; protocole « événements d'abord »."}
+ ]
+}

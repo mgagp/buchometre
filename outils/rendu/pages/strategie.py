@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Pages « Protocole hiver 2026-2027 » (appelé par generer_site.py ; lit data/protocole*.csv/json et la saisie)."""
+"""Stratégie 2026-2027 : règles et tarif (strategie/index.html), plan de saison fusionné (strategie/plan.html),
+étude météo (strategie/meteo.html), inventaire de la pile (strategie/inventaire.html).
+Appelé par outils/generer_site.py ; lit data/protocole*.csv/json."""
 import csv, json, os, html, datetime as dt
-import svg
-from generer_site import page, carte, argent, nb, pct, RACINE, OUT, MOIS
+from chemins import RACINE, OUT
+from rendu import graphes as svg
+from rendu import gabarit
+from rendu.gabarit import page
+from rendu.composants import carte, argent, nb, pct
 
 E = html.escape
 CENTRAL = "2024-2025"  # météo d'hiver « type » (degrés-jours médians des 3 hivers)
@@ -15,8 +20,6 @@ SOURCES = [
     ("Hydro-Québec, Historique des résultats (bilan par hiver)", "https://www.hydroquebec.com/residentiel/mieux-consommer/pourquoi-mieux-consommer/bilan-efforts-collectifs/historique-resultats.html"),
     ("Open-Meteo, API d'archives historiques (réanalyse ERA5), point 45,40 N / −74,03 O (Vaudreuil-Dorion)", "https://open-meteo.com/en/docs/historical-weather-api"),
 ]
-SOUSNAV = [("inventaire.html", "0. Inventaire de la pile"), ("protocole.html", "1. Positionnement"), ("protocole-meteo.html", "2. Étude météo"), ("protocole-sim.html", "3. Simulation : sommaire"),
-           ("protocole-sim-mensuel.html", "mensuel"), ("protocole-sim-jours.html", "jour par jour"), ("protocole-saisie.html", "4. Saisie et suivi")]
 
 
 def lire(rel):
@@ -25,8 +28,7 @@ def lire(rel):
 
 
 def sousnav(nom):
-    return ("<div class='info' style='padding:6px 10px'><b>Protocole hiver 2026-2027</b> : " +
-            " · ".join(f"<a href='{u}'{' style=font-weight:700' if u == nom else ''}>{E(t)}</a>" for u, t in SOUSNAV) + "</div>")
+    return ""  # sous-menu géré par rendu/gabarit.py
 
 
 def dfr(s):
@@ -34,13 +36,12 @@ def dfr(s):
     return f"{d.day} {MOIS_FR[d.month]}"
 
 
-def main(quand):
+def main(quand, a_faire=""):
     P = json.load(open(os.path.join(RACINE, "data/protocole.json"), encoding="utf-8"))
     H = P["hypotheses"]; F = H["flex_D_2026"]; TD = H["tarif_D_2026"]; kb = P["kwh_par_buche"]
     V = P["valeur_buche"]; SE = P["seuils"]; C = P["critique"]; SC = P["stats_creux"]; R = P["resume_sim"]
     MJ = lire("data/protocole_meteo_jours.csv"); CR = lire("data/protocole_creux.csv"); SIM = lire("data/protocole_simulation.csv")
-    SA = lire("data/saisie_2026-2027_enrichie.csv")
-    sous = (f"<p class='sous'>Généré le {E(quand)} par <code>outils/generer_site.py</code> (pages protocole : <code>outils/generer_protocole.py</code>). "
+    sous = (f"<p class='sous'>Généré le {E(quand)} par <code>outils/rendu/pages/strategie.py</code>. "
             f"Sources consultées le 2026-11-22 ; météo Open-Meteo jusqu'au {E(P['meteo_derniere_date'])}.</p>")
     complets = ["2023-2024", "2024-2025", "2025-2026"]
     n_creux = [SC[h]["n"] for h in complets]
@@ -49,7 +50,7 @@ def main(quand):
     evh = P["evts_par_hiver"]
 
     def pg(nom, titre, corps):
-        page(nom, titre, sousnav(nom) + corps, quand, sous=sous)
+        page(nom, titre, corps, quand, sous=sous, contexte="Stratégie · saison 2026-2027")
 
     # ======================= 1. Positionnement =======================
     SK = P["stock"]; SR = SK["resultats"]; NB = SK["buches"]
@@ -66,7 +67,7 @@ def main(quand):
     stk_j = {lib: [cc[h].get(k, (None, None))[0] for h in complets] for lib, k in jalons}
     bpe = SK["buches_par_evt_typ"]
     h = ["<div class='cartes'>",
-         carte(f"≈ {NB}", f"bûches en stock (≈ {nb(SK['cordes'], 1)} cordes)", "prov", "inventaire.html", f"inventaire mesuré de la pile, 22 nov. ; fourchette {SK['inventaire']['param']['fourchette_retenue'][0]}–{SK['inventaire']['param']['fourchette_retenue'][1]} (à confirmer)"),
+         carte(f"≈ {NB}", f"bûches en stock (≈ {nb(SK['cordes'], 1)} cordes)", "prov", "inventaire.html", f"inventaire mesuré de la pile, 22 nov. ; fourchette {SK['inventaire']['param']['fourchette_retenue'][0]}–{SK['inventaire']['param']['fourchette_retenue'][1]} ; une seule rangée (confirmé)"),
          carte(f"{min(r['jours_feu'] for r in rg):.0f}–{max(r['jours_feu'] for r in rg):.0f}", "jours de feu que le stock permet", "neutre", "protocole-sim.html", "selon la météo des 3 hivers"),
          carte(f"{argent(min(r['valeur'] for r in rg), 0)}–{argent(max(r['valeur'] for r in rg), 0)}", "valeur évitée cet hiver (règle)", "ok", "protocole-sim.html",
                f"optimum a posteriori {argent(min(r['valeur'] for r in op), 0)}–{argent(max(r['valeur'] for r in op), 0)} ; feu chaque jour {argent(min(r['valeur'] for r in qd), 0)}–{argent(max(r['valeur'] for r in qd), 0)}"),
@@ -113,11 +114,11 @@ def main(quand):
              f"<li><b>Stock de départ</b> : <b>≈ {NB} bûches</b>, tiré de l'<a href='inventaire.html'>inventaire mesuré de la pile</a> "
              f"({nb(IV['surface'], 2)} pi² de face × {nb(IV['param']['densite'], 1)} bûches/pi²), soit ≈ {nb(SK['cordes'], 1)} cordes à {H['buches_par_corde']} bûches/corde "
              f"ou ≈ {nb(IV['cordes_face'], 1)} cordes de face (4 × 8 pi, bûches de 16 po). Fourchette retenue : {IV['param']['fourchette_retenue'][0]} à {IV['param']['fourchette_retenue'][1]} bûches ; "
-             f"tests plus larges : {IV['buches_bas']} à {IV['buches_haut']}. <b>À confirmer par Marc</b> : nombre de rangées en profondeur (une seule présumée) ; densité tirée d'une seule corde d'étalonnage.</li>"
+             f"tests plus larges : {IV['buches_bas']} à {IV['buches_haut']}. Une seule rangée en profondeur : <b>confirmé par Marc</b>. Reste incertaine : la densité, tirée d'une seule corde d'étalonnage.</li>"
              f"<li><b>Ce qu'il remplace</b> : la 1re estimation du même jour, ≈ {nb(H['cordes_restantes_ancien'], 1)} corde × {H['buches_par_corde']} = {H['stock_ancien']} bûches (fourchette 260 à 435), "
              "qui reposait sur une impression et non sur une mesure. L'écart (× 2,5) est signalé : 4,1 cordes, c'est presque l'achat complet de 2023-24 (4 cordes) ; voir la "
              "<a href='inventaire.html#plausibilite'>vérification de plausibilité</a>.</li>"
-             "<li><b>Paramètre daté</b> : le stock de départ est un paramètre (<code>data/inventaire_pile_2026-11.csv</code>, <code>outils/inventaire.py</code>), pas une ligne de saisie. "
+             "<li><b>Paramètre daté</b> : le stock de départ est un paramètre (<code>data/inventaire_pile_2026-11.csv</code>, <code>outils/calculs/inventaire.py</code>), pas une ligne de saisie. "
              "La colonne <code>stock_compte</code> de la saisie reste réservée à un vrai recomptage.</li>"
              "<li><b>Coût</b> : déjà payé (coût irrécupérable) ; il n'entre pas dans la décision de brûler. "
              f"Repère secondaire : valeur de remplacement ≈ {argent(H['prix_corde_remplacement'])} la corde (425 $ ÷ 4 + 25 $), soit ≈ {argent(SK['valeur_remplacement'], 0)} pour le stock.</li></ul>")
@@ -156,7 +157,7 @@ def main(quand):
              "<li><b>Si le stock baisse plus vite que prévu</b> (plus de 50 bûches sous le jalon du mois, ou recomptage plus bas) : suspendre les feux de jours cœur, "
              "ne garder que les événements jusqu'à revenir sur la courbe.</li>"
              "<li><b>Jour témoin</b> : environ un jour froid par mois sans feu (et sans événement), noté « témoin ».</li>"
-             "<li><b>Saisie</b> chaque jour, même sans feu, dans <code>data/saisie_2026-2027.csv</code> ; la page Saisie suit le stock restant contre le plan.</li></ol>"
+             "<li><b>Saisie</b> chaque jour, même sans feu, dans <code>data/saisie_2026-2027.csv</code> ; le <a href='journal.html'>Journal</a> suit le stock restant contre le plan.</li></ol>"
              "<table><tr><th>Jalon</th><th>Stock prévu (3 météos)</th><th>Réserve événements</th></tr>" +
              "".join(f"<tr><td>{lib}</td><td class=n>{' / '.join(str(x) for x in stk_j[lib])}</td><td class=n>{res_j[lib]}</td></tr>" for lib, _ in jalons) + "</table>"
              "<p class='petit'>Rythme médian simulé : nov. " + nb(rythme["11"]) + " · déc. " + nb(rythme["12"]) + " · janv. " + nb(rythme["01"]) + " · févr. " + nb(rythme["02"]) + " · mars " + nb(rythme["03"]) +
@@ -169,7 +170,7 @@ def main(quand):
              "(par exemple si une partie de la pile est plus creuse que prévu).</p>")
     h.append("<h2>Sources</h2><ul>" + "".join(f"<li><a href='{u}'>{E(t)}</a></li>" for t, u in SOURCES) +
              "</ul><p class='petit'>Consultées le 22 novembre 2026. Les données ouvertes d'Hydro-Québec sont « brutes, sans garantie » ; l'avis officiel par courriel a priorité.</p>")
-    pg("protocole.html", "Protocole hiver 2026-2027 : positionnement", "".join(h))
+    pg("protocole.html", "Stratégie 2026-2027 : règles et tarif", "".join(h) + a_faire)
 
 
     # ======================= 2. Étude météo =======================
@@ -181,11 +182,11 @@ def main(quand):
     for j in MJ:
         par_h.setdefault(j["hiver"], {})[j["date"][5:]] = float(j["t_moy"])
     ser = [{"nom": f"T moy. {hv}", "valeurs": [par_h.get(hv, {}).get(c["date"][5:]) for c in clim], "couleur": col, "epaisseur": 1, "points": False}
-           for hv, col in (("2023-2024", "#b0bec5"), ("2024-2025", "#90caf9"), ("2025-2026", "#ce93d8"))]
-    ser.append({"nom": "Moyenne 3 hivers lissée (15 j)", "valeurs": [c["t_lisse"] for c in clim], "couleur": "#000", "epaisseur": 2.5, "points": False})
+           for hv, col in (("2023-2024", "gris_pale"), ("2024-2025", "bleu_pale"), ("2025-2026", "violet_pale"))]
+    ser.append({"nom": "Moyenne 3 hivers lissée (15 j)", "valeurs": [c["t_lisse"] for c in clim], "couleur": "encre", "epaisseur": 2.5, "points": False})
     if "2026-2027" in par_h:
-        ser.append({"nom": "2026-2027 (à ce jour)", "valeurs": [par_h["2026-2027"].get(c["date"][5:]) for c in clim], "couleur": "#c62828", "epaisseur": 2, "points": False})
-    g_clim = svg.series(labs, ser, titre_g="°C", h=320, zones=[(i_m0, i_m1, "fenêtre de Marc : 15 nov.–15 mars", "rgba(255,152,0,0.18)", False), (i_c0, i_c1, "période critique", "rgba(33,150,243,0.14)", True)])
+        ser.append({"nom": "2026-2027 (à ce jour)", "valeurs": [par_h["2026-2027"].get(c["date"][5:]) for c in clim], "couleur": "evt", "epaisseur": 2, "points": False})
+    g_clim = svg.series(labs, ser, titre_g="°C", h=320, zones=[(i_m0, i_m1, "fenêtre de Marc : 15 nov.–15 mars", "zone_marc", False), (i_c0, i_c1, "période critique", "zone_critique", True)])
     h = ["<h2 id='critique'>(a) La période critique</h2>"
          f"<p>Définition : jours où la température moyenne des trois derniers hivers, lissée sur 15 jours, est <b>à 0 °C ou moins</b> (≥ 18 degrés-jours par jour). "
          f"Résultat : <b>du {dfr(C['debut'])} au {dfr(C['fin'])}</b> ({C['jours']} jours). Elle concentre {pct(C['part_dj'])} des degrés-jours d'octobre à avril "
@@ -216,15 +217,15 @@ def main(quand):
                 k = i
                 while k + 1 < len(js) and js[k + 1]["creux"] == js[i]["creux"]:
                     k += 1
-                zones.append((i, k, f"creux {js[i]['creux']}", "#dbe9ff", False)); i = k + 1
+                zones.append((i, k, f"creux {js[i]['creux']}", "zone_creux", False)); i = k + 1
             else:
                 i += 1
         g = svg.series([dfr(j["date"]) for j in js], [
-            {"nom": "Événements Flex D (axe droit)", "valeurs": [int(j["evenements_flexd"]) or None for j in js], "couleur": "#c62828", "type": "bar", "axe": "d", "opacite": 0.8},
-            {"nom": "T moy. du jour", "valeurs": [float(j["t_moy"]) for j in js], "couleur": "#90a4ae", "epaisseur": 1, "points": False},
-            {"nom": "T lissée 3 j", "valeurs": [float(j["t_lisse_3j"]) for j in js], "couleur": "#1565c0", "points": False},
-            {"nom": "Normale récente (médiane 31 j)", "valeurs": [float(j["mediane_31j"]) for j in js], "couleur": "#000", "pointille": True, "epaisseur": 1.2, "points": False},
-            {"nom": "Jours cœur", "valeurs": [float(j["t_moy"]) if j["coeur"] == "1" else None for j in js], "couleur": "#0d47a1", "type": "bar", "opacite": 0.35},
+            {"nom": "Événements Flex D (axe droit)", "valeurs": [int(j["evenements_flexd"]) or None for j in js], "couleur": "evt", "type": "bar", "axe": "d", "opacite": 0.8},
+            {"nom": "T moy. du jour", "valeurs": [float(j["t_moy"]) for j in js], "couleur": "gris_bleu", "epaisseur": 1, "points": False},
+            {"nom": "T lissée 3 j", "valeurs": [float(j["t_lisse_3j"]) for j in js], "couleur": "reel", "points": False},
+            {"nom": "Normale récente (médiane 31 j)", "valeurs": [float(j["mediane_31j"]) for j in js], "couleur": "encre", "pointille": True, "epaisseur": 1.2, "points": False},
+            {"nom": "Jours cœur", "valeurs": [float(j["t_moy"]) if j["coeur"] == "1" else None for j in js], "couleur": "bleu_fonce", "type": "bar", "opacite": 0.35},
         ], titre_g="°C", titre_d="évts", zones=zones, h=280)
         h.append(f"<h3>Hiver {hv}{' (en cours)' if hv == '2026-2027' else ''}</h3>" + g)
     h.append("<details><summary>Liste de tous les creux</summary><table><tr><th>Creux</th><th>Du</th><th>Au</th><th>Jours</th><th>Jours cœur</th><th>Jour le plus froid</th><th>T moy. du creux</th><th>Degrés-jours</th><th>Événements Flex D</th><th>Période critique</th></tr>" +
@@ -233,7 +234,7 @@ def main(quand):
     # événements
     pr = P["proba_evt"]
     g_p = svg.series([("≤ −15 °C" if p["de"] == -99 else (f"> {p['de']} °C" if p["a"] == 99 else f"{p['de']} à {p['a']} °C")) for p in pr], [
-        {"nom": "Probabilité d'un événement Flex D ce jour-là (%)", "valeurs": [round(p["p"] * 100) for p in pr], "couleur": "#c62828", "type": "bar"}], titre_g="%", h=240, w=700)
+        {"nom": "Probabilité d'un événement Flex D ce jour-là (%)", "valeurs": [round(p["p"] * 100) for p in pr], "couleur": "evt", "type": "bar"}], titre_g="%", h=240, w=700)
     h.append("<h2 id='evenements'>(c) Quand tombent les événements de pointe ?</h2>"
              "<p>Historique publié par Hydro-Québec (données ouvertes, offre TPC-DPC = Flex D), croisé avec la température moyenne du jour à Vaudreuil-Dorion, hivers 2024-2025 et 2025-2026 (1er déc.–31 mars) :</p>" + g_p +
              "<table><tr><th>T moy. du jour</th><th>Jours</th><th>Jours avec événement</th><th>Probabilité</th></tr>" +
@@ -243,7 +244,7 @@ def main(quand):
              "Pour 2023-2024 (avant les données ouvertes), la simulation suppose un événement les jours ≤ −12 °C.</p>")
     # gain
     I = P["interaction"]
-    lignes = [{"nom": f"Météo {hv}", "couleur": col, "pts": P["courbes"][hv]} for hv, col in (("2023-2024", "#90a4ae"), ("2024-2025", "#1565c0"), ("2025-2026", "#8e24aa"))]
+    lignes = [{"nom": f"Météo {hv}", "couleur": col, "pts": P["courbes"][hv]} for hv, col in (("2023-2024", "gris_bleu"), ("2024-2025", "reel"), ("2025-2026", "marc"))]
     g_c = svg.courbes(lignes, tx="Part des bûches (les plus rentables d'abord)", ty="Part de la valeur")
     t = ["<table><tr><th>Météo</th><th>Degrés-jours 7 nov.–31 mars</th><th>Événements</th><th>Stratégie</th><th>Jours de feu</th><th>Bûches</th><th>Valeur hors événement</th><th>Prime d'événement</th><th>Valeur totale</th><th>vs " + argent(P["prix_ref"], 0) + "</th></tr>"]
     for hv in complets:
@@ -281,12 +282,12 @@ def main(quand):
     labs = [dfr(s["date_2026_2027"]) for s in cen]
     g_sim = svg.series(labs, [
         {"nom": "Bûches prévues (axe droit)", "valeurs": [s["buches"] or None for s in cen], "couleur": svg.COUL["buche"], "type": "bar", "axe": "d", "opacite": 0.55},
-        {"nom": "Événements (axe droit)", "valeurs": [s["evenements"] * 3 or None for s in cen], "couleur": "#c62828", "type": "bar", "axe": "d", "opacite": 0.9, "sans_legende": True},
+        {"nom": "Événements (axe droit)", "valeurs": [s["evenements"] * 3 or None for s in cen], "couleur": "evt", "type": "bar", "axe": "d", "opacite": 0.9, "sans_legende": True},
         {"nom": "T moy. (°C)", "valeurs": [s["t_moy"] for s in cen], "couleur": svg.COUL["temp"], "points": False, "epaisseur": 1.2},
     ], titre_g="°C", titre_d="bûches", liens=[f"protocole-sim-jours.html#s-{s['date_2026_2027']}" for s in cen], h=300)
     ser_stk = [{"nom": f"Stock restant, météo {hv}", "valeurs": [s["stock_restant"] for s in ss(hv)][:len(cen)], "couleur": col, "points": False, "epaisseur": 2.5 if hv == CENTRAL else 1.3}
-               for hv, col in (("2023-2024", "#90a4ae"), ("2024-2025", "#1565c0"), ("2025-2026", "#8e24aa"))]
-    ser_stk.append({"nom": "Réserve pour les événements", "valeurs": [s["reserve_evt"] for s in cen], "couleur": "#c62828", "pointille": True, "points": False})
+               for hv, col in (("2023-2024", "gris_bleu"), ("2024-2025", "reel"), ("2025-2026", "marc"))]
+    ser_stk.append({"nom": "Réserve pour les événements", "valeurs": [s["reserve_evt"] for s in cen], "couleur": "evt", "pointille": True, "points": False})
     g_stk = svg.series(labs, ser_stk, titre_g="bûches", h=260)
     tb = ["<table><tr><th>Météo</th><th>Événements</th><th>Stratégie</th><th>Jours de feu</th><th>Bûches brûlées</th><th>Restantes au 31 mars</th><th>Événements couverts</th>"
           "<th>Valeur hors événement</th><th>Prime d'événement</th><th>Valeur totale</th></tr>"]
@@ -314,7 +315,7 @@ def main(quand):
          "<p class='petit'>« Optimum a posteriori » = meilleur placement possible en connaissant tout l'hiver d'avance (borne haute). "
          "« Étalé chaque jour » = mêmes bûches réparties selon les degrés-jours, sans viser les fenêtres (4 h sur 24 de leur chaleur tombe dans une fenêtre). "
          "Les bûches non brûlées au 31 mars restent pour l'hiver suivant.</p>"]
-    pg("protocole-sim.html", "Simulation 2026-2027 : sommaire (aperçu)", "".join(h))
+    plan_parts = ["".join(h)]
 
     mois = {}
     for a in cen:
@@ -324,79 +325,31 @@ def main(quand):
     noms = {"2026-11": "novembre 2026", "2026-12": "décembre 2026", "2027-01": "janvier 2027", "2027-02": "février 2027", "2027-03": "mars 2027"}
     g_m = svg.series([noms[k] for k in mois], [
         {"nom": "Bûches brûlées", "valeurs": [round(m["b"]) for m in mois.values()], "couleur": svg.COUL["buche"], "type": "bar"},
-        {"nom": "Stock en fin de mois", "valeurs": [round(m["fin"]) for m in mois.values()], "couleur": "#1565c0", "type": "bar"},
+        {"nom": "Stock en fin de mois", "valeurs": [round(m["fin"]) for m in mois.values()], "couleur": "reel", "type": "bar"},
         {"nom": "Valeur ($, axe droit)", "valeurs": [round(m["val"]) for m in mois.values()], "couleur": svg.COUL["vert"], "axe": "d"}], titre_g="bûches", titre_d="$", h=280, w=900)
     tm = ("<table><tr><th>Mois</th><th>Jours</th><th>T moy.</th><th>Degrés-jours</th><th>Événements</th><th>Jours de feu</th><th>Bûches</th><th>Stock fin de mois</th><th>kWh évités</th><th>Valeur</th><th>dont prime</th></tr>" +
           "".join(f"<tr><td>{noms[k]}</td><td class=n>{m['n']}</td><td class=n>{nb(sum(m['t']) / len(m['t']), 1)} °C</td><td class=n>{nb(m['dj'])}</td><td class=n>{m['evt']}</td><td class=n>{m['feu']}</td>"
                   f"<td class=n>{nb(m['b'])}</td><td class=n>{nb(m['fin'])}</td><td class=n>{nb(m['kwh'])}</td><td class=n>{argent(m['val'])}</td><td class=n>{argent(m['prime'])}</td></tr>" for k, m in mois.items()) + "</table>")
-    pg("protocole-sim-mensuel.html", "Simulation 2026-2027 : mensuel (aperçu)", "<p class='petit'>Météo " + CENTRAL + f" rejouée sur 2026-2027 (7 nov. → 31 mars), stock ≈ {NB} bûches, règle de budget.</p>" + g_m + tm)
+    plan_parts.append("<h2 id='mensuel'>Par mois</h2>" + "<p class='petit'>Météo " + CENTRAL + f" rejouée sur 2026-2027 (7 nov. → 31 mars), stock ≈ {NB} bûches, règle de budget.</p>" + g_m + tm)
 
     def coul(j, r):
         if j["evenements"]:
-            return "#c62828"
-        return "#cfd8dc" if not j["buches"] else f"rgba(239,108,0,{0.35 + 0.65 * r:.2f})"
+            return "evt"
+        return "cal_sansfeu" if not j["buches"] else svg.intensite("buche", 0.35 + 0.65 * r)
     for s in cen:
         s["date"] = dt.date.fromisoformat(s["date_2026_2027"])
     cal = svg.calendrier(cen, lambda j: j["buches"], coul, lambda j: f"{j['date']} : {j['t_moy']} °C, {j['buches']:.0f} bûches, stock {j['stock_restant']:.0f}" + (f", {j['evenements']} événement(s)" if j["evenements"] else ""),
                          lambda j: f"#s-{j['date']}", vmax=10)
-    rows = "".join(f"<tr id='s-{s['date']}'{' style=background:#fdecea' if s['evenements'] else ''}><td>{s['date']}</td><td class=n>{nb(s['t_moy'], 1)}</td><td class=n>{nb(s['dj18'])}</td><td>{E(s['creux'])}{' (cœur)' if s['coeur'] == '1' else ''}</td>"
+    rows = "".join(f"<tr id='s-{s['date']}'{' class=evt' if s['evenements'] else ''}><td>{s['date']}</td><td class=n>{nb(s['t_moy'], 1)}</td><td class=n>{nb(s['dj18'])}</td><td>{E(s['creux'])}{' (cœur)' if s['coeur'] == '1' else ''}</td>"
                    f"<td class=n>{s['evenements'] or ''}</td><td class=n>{nb(s['buches'])} <span class='barre' style='width:{s['buches'] * 4:.0f}px'></span></td><td class=n>{nb(s['stock_restant'])}</td><td class=n>{nb(s['reserve_evt'])}</td>"
                    f"<td class=n>{nb(s['kwh_evites'])}</td><td class=n>{nb(s['kwh_evites_pointe'], 1)}</td><td class=n>{argent(s['val'])}</td></tr>" for s in cen)
-    pg("protocole-sim-jours.html", "Simulation 2026-2027 : jour par jour (aperçu)",
+    plan_parts.append("<h2 id='jours'>Jour par jour</h2>" +
        "<p>Calendrier : rouge = jour d'événement ; orange = feu prévu ; gris = pas de feu. Météo " + CENTRAL + " rejouée, stock ≈ " + str(NB) + " bûches.</p>" + cal +
        "<div class='defile'><table><tr><th>Jour</th><th>T moy.</th><th>DJ</th><th>Creux</th><th>Évts</th><th>Bûches</th><th>Stock restant</th><th>Réserve évts</th><th>kWh évités</th><th>dont en pointe</th><th>Valeur</th></tr>" + rows + "</table></div>")
 
 
-    # ======================= 4. Saisie =======================
-    plan = {s["date_2026_2027"]: s for s in cen}
-    dates = [s["date_2026_2027"] for s in cen]
-    sai = {r["date"]: r for r in SA}
-    cb_p, cb_r, cv_p, cv_r, x1, x2, x3, x4 = 0, 0, 0, 0, [], [], [], []
-    for d in dates:
-        cb_p += plan[d]["buches"]; cv_p += plan[d]["val"]; x1.append(round(cb_p)); x3.append(round(cv_p, 1))
-        if d in sai:
-            cb_r += float(sai[d]["buches"] or 0); cv_r += float(sai[d]["valeur_base"] or 0); x2.append(round(cb_r)); x4.append(round(cv_r, 1))
-        else:
-            x2.append(None); x4.append(None)
-    sr_reel = []
-    for d in dates:
-        sr_reel.append(float(sai[d]["stock_restant"]) if d in sai else None)
-    g_b = svg.series([dfr(d) for d in dates], [
-        {"nom": "Stock restant : plan (règle, météo " + CENTRAL + ")", "valeurs": [plan[d]["stock_restant"] for d in dates], "couleur": "#9e9e9e", "pointille": True, "points": False},
-        {"nom": "Réserve pour les événements", "valeurs": [plan[d]["reserve_evt"] for d in dates], "couleur": "#c62828", "pointille": True, "points": False, "epaisseur": 1},
-        {"nom": "Stock restant : réel", "valeurs": sr_reel, "couleur": svg.COUL["buche"], "points": False, "epaisseur": 3}], titre_g="bûches", h=260)
-    g_v = svg.series([dfr(d) for d in dates], [
-        {"nom": "Valeur cumulée : projection", "valeurs": x3, "couleur": "#9e9e9e", "pointille": True, "points": False},
-        {"nom": "Valeur cumulée : réel (hors prime d'événement)", "valeurs": x4, "couleur": svg.COUL["vert"], "points": False, "epaisseur": 3}], titre_g="$", h=240)
-    if SA:
-        g_k = svg.series([r["date"] for r in SA], [
-            {"nom": "kWh saisis", "valeurs": [float(r["kwh"]) if r["kwh"] else None for r in SA], "couleur": svg.COUL["reel"]},
-            {"nom": "kWh attendus (modèle, avec tes bûches)", "valeurs": [float(r["kwh_attendu_modele"]) if r["kwh_attendu_modele"] else None for r in SA], "couleur": svg.COUL["sansfeu"], "pointille": True},
-            {"nom": "Bûches (axe droit)", "valeurs": [float(r["buches"] or 0) for r in SA], "couleur": svg.COUL["buche"], "type": "bar", "axe": "d", "opacite": 0.4}], titre_g="kWh", titre_d="bûches", h=260)
-        tab = ("<div class='defile'><table><tr><th>Date</th><th>Bûches</th><th>Stock restant</th><th>kWh</th><th>Événement (saisi / HQ)</th><th>Témoin</th><th>T moy.</th><th>kWh attendus</th><th>Écart</th><th>Valeur</th><th>Remarque</th></tr>" +
-               "".join(f"<tr><td>{r['date']}</td><td class=n>{nb(float(r['buches'] or 0))}</td><td class=n>{r['stock_restant']}{' (compté)' if r['stock_compte'] else ''}</td><td class=n>{r['kwh']}</td><td>{'oui' if r['evenement_hq_saisi'] == '1' else 'non'} / {r['evenements_hq_donnees']}</td>"
-                       f"<td>{'témoin' if r['jour_temoin'] == '1' else ''}</td><td class=n>{r['t_moy']}</td><td class=n>{r['kwh_attendu_modele']}</td><td class=n>{r['ecart_kwh']}</td>"
-                       f"<td class=n>{argent(float(r['valeur_base'] or 0))}</td><td>{E(r['remarque'])}</td></tr>" for r in SA) + "</table></div>")
-    else:
-        g_k = ""
-        tab = "<div class='alerte'>Aucune journée saisie pour l'instant : les courbes « réel » se rempliront au fil des saisies.</div>"
-    ev26 = P["evts_par_hiver"]["2026-2027"]
-    h = ["<div class='cartes'>", carte(str(len(SA)), "jours saisis", "neutre"), carte(nb(float(SA[-1]["stock_restant"]) if SA else NB), "bûches restantes (réel)", "neutre", sous=f"plan à ce jour : {nb(next((plan[d]['stock_restant'] for d in reversed(dates) if d <= dt.date.today().isoformat()), NB))} ; réserve : {nb(next((plan[d]['reserve_evt'] for d in reversed(dates) if d <= dt.date.today().isoformat()), 0))}"),
-         carte(str(sum(1 for r in SA if r["jour_temoin"] == "1")), "jours témoins", "neutre"),
-         carte(f"{ev26['evenements']}", "événements Flex D 2026-27 (données HQ)", "neutre", sous="mis à jour par --maj"), "</div>",
-         "<h2>Comment saisir</h2><ol>"
-         "<li>Ouvrir <code>data/saisie_2026-2027.csv</code> (Excel, LibreOffice ou un éditeur texte). Une ligne par jour, <b>même sans feu</b>.</li>"
-         "<li>Colonnes : <code>date</code> (AAAA-MM-JJ) · <code>buches</code> (nombre) · <code>kwh</code> (consommation du jour, Espace client Hydro-Québec) · "
-         "<code>evenement_hq</code> (oui/non) · <code>jour_temoin</code> (oui si jour froid volontairement sans feu) · <code>stock_compte</code> (facultatif : nombre de bûches comptées ce jour-là, remplace le stock calculé) · <code>remarque</code> (absence, feu de plaisir, invités…).</li>"
-         "<li>Exemples : <code>2026-12-08,5,61,oui,non,,feu allumé 5 h 30 pour l'événement du matin</code> · <code>2026-12-01,0,72,non,non,330,tas recompté</code></li>"
-         "<li>Régénérer : <code>py outils\\preparer_donnees.py --maj</code> (télécharge météo et événements HQ) puis <code>py outils\\generer_site.py</code>, puis F5.</li>"
-         "<li>Publier : <code>git commit -am \"Saisie …\"</code> puis <code>git push</code> ; GitHub Actions régénère et republie le site en ligne (un commit par saisie, même pour plusieurs jours).</li></ol>",
-         "<h2>Stock restant : réel vs plan</h2>", g_b,
-         "<p class='petit'>Si la courbe réelle passe plus de 50 bûches sous le plan, ou sous la réserve : ne garder que les événements (règle 5).</p>",
-         "<h2>Valeur cumulée : réel vs projection</h2>", g_v, g_k, tab,
-         "<p class='petit'>La projection est la simulation ciblée (météo " + CENTRAL + "). Les kWh attendus utilisent la météo réelle du jour et tes bûches. "
-         "La valeur « réel » ne compte pas encore la prime d'événement (il faut les kWh horaires ; voir Propositions).</p>"]
-    pg("protocole-saisie.html", "Saisie 2026-2027 et suivi réel vs projection", "".join(h))
+    pg("strategie/plan.html", "Plan de saison 2026-2027 (simulation)", "".join(plan_parts))
+
     page_inventaire(quand, P)
 
 
@@ -409,16 +362,16 @@ def schema_svg(sections):
     sol = m + max(rect["hauteur_pi"], pente["hauteur_pi"]) * k
     x0 = m
     o = [f"<svg class='graphe' viewBox='0 0 {W:.0f} {Hs:.0f}' role='img' aria-label='Schéma de la pile vue de face'>",
-         f"<line x1='0' y1='{sol}' x2='{W:.0f}' y2='{sol}' stroke='#555' stroke-width='1.5'/>"]
+         f"<line x1='0' y1='{sol}' x2='{W:.0f}' y2='{sol}' class='axe0'/>"]
     # pente (triangle rectangle : bas à gauche, haut contre le rectangle)
     pw, ph = pente["largeur_pi"] * k, pente["hauteur_pi"] * k
-    o.append(f"<polygon points='{x0},{sol} {x0 + pw},{sol} {x0 + pw},{sol - ph}' fill='#ffcc80' stroke='#e65100'/>")
+    o.append(f"<polygon points='{x0},{sol} {x0 + pw},{sol} {x0 + pw},{sol - ph}' class='pile pile-pente'/>")
     o.append(f"<text x='{x0 + pw * 0.62:.0f}' y='{sol - 8}' font-size='12' text-anchor='middle'>{pente['buches']}</text>")
     o.append(f"<text x='{x0 + pw / 2:.0f}' y='{sol + 16}' font-size='11' text-anchor='middle'>4 pi</text>")
-    o.append(f"<text x='{x0 + pw * 0.35:.0f}' y='{sol - ph * 0.55:.0f}' font-size='11' text-anchor='middle' fill='#e65100'>45°</text>")
+    o.append(f"<text x='{x0 + pw * 0.35:.0f}' y='{sol - ph * 0.55:.0f}' font-size='11' text-anchor='middle' class='pile-note'>45°</text>")
     # rectangle
     rx, rw, rh = x0 + pw, rect["largeur_pi"] * k, rect["hauteur_pi"] * k
-    o.append(f"<rect x='{rx}' y='{sol - rh}' width='{rw}' height='{rh}' fill='#ffb74d' stroke='#e65100'/>")
+    o.append(f"<rect x='{rx}' y='{sol - rh}' width='{rw}' height='{rh}' class='pile pile-rect'/>")
     o.append(f"<text x='{rx + rw / 2:.0f}' y='{sol - rh / 2 + 5:.0f}' font-size='15' font-weight='700' text-anchor='middle'>Rectangle principal : {rect['buches']} bûches</text>")
     o.append(f"<text x='{rx + rw / 2:.0f}' y='{sol + 16}' font-size='11' text-anchor='middle'>22 pi</text>")
     o.append(f"<text x='{rx + rw + 6:.0f}' y='{sol - rh / 2:.0f}' font-size='11'>4 pi 8 po</text>")
@@ -426,12 +379,12 @@ def schema_svg(sections):
     tx = rx + rw + 70
     for i in range(tri["nombre"]):
         bw, bh = tri["largeur_pi"] * k, tri["hauteur_pi"] * k
-        o.append(f"<polygon points='{tx},{sol} {tx + bw},{sol} {tx + bw / 2},{sol - bh}' fill='#ffe0b2' stroke='#e65100'/>")
+        o.append(f"<polygon points='{tx},{sol} {tx + bw},{sol} {tx + bw / 2},{sol - bh}' class='pile pile-tri'/>")
         o.append(f"<text x='{tx + bw / 2:.0f}' y='{sol - 10}' font-size='12' text-anchor='middle'>{round(tri['buches'] / tri['nombre'])}</text>")
         o.append(f"<text x='{tx + bw / 2:.0f}' y='{sol + 16}' font-size='11' text-anchor='middle'>6 pi</text>")
         o.append(f"<text x='{tx + bw / 2:.0f}' y='{sol - bh - 5:.0f}' font-size='11' text-anchor='middle'>3 pi 4 po</text>")
         tx += bw + 24
-    o.append(f"<text x='{m}' y='{Hs - 14:.0f}' font-size='11' fill='#555'>Vue de face, à l'échelle (1 pi = {k} px). Profondeur : une seule rangée de bûches de 16 po présumée. "
+    o.append(f"<text x='{m}' y='{Hs - 14:.0f}' font-size='11' class='ax'>Vue de face, à l'échelle (1 pi = {k} px). Profondeur : une seule rangée de bûches de 16 po (confirmé). "
              "Triangles à 45° ; leur position est schématique.</text>")
     o.append("</svg>")
     return "".join(o)
@@ -446,7 +399,7 @@ def texte_inventaire(I, NB_ancien):
          "## Résultat", "",
          f"- Estimation centrale : **{I['buches']} bûches** (calcul exact {f(I['buches_exact'], 1)} ; la session arrondit à 875-880).",
          f"- Surface de face totale : {f(I['surface'])} pi².",
-         f"- Fourchette retenue : {p['fourchette_retenue'][0]} à {p['fourchette_retenue'][1]} bûches. À CONFIRMER par Marc (nombre de rangées en profondeur ; densité tirée d'un seul échantillon).",
+         f"- Fourchette retenue : {p['fourchette_retenue'][0]} à {p['fourchette_retenue'][1]} bûches. Une seule rangée en profondeur, confirmée par Marc ; la densité reste tirée d'un seul échantillon.",
          f"- En cordes : {f(I['cordes_face'], 1)} cordes de face (4 × 8 pi = 32 pi², bûches de 16 po) ; {f(I['cordes_232'], 1)} cordes au ratio du projet ({p['buches_par_corde']} bûches/corde).",
          f"- Remplace la 1re estimation du même jour : environ 1,5 corde, soit {NB_ancien} bûches.", "",
          "## Méthode", "",
@@ -469,9 +422,9 @@ def texte_inventaire(I, NB_ancien):
           f"- {f(p['densite'], 1)} bûches/pi² × 32 = {f(I['buches_par_corde_implicite'], 0)} bûches par corde, contre {p['buches_par_corde']} dans le projet (2023-24).",
           f"- À {p['buches_par_corde']} bûches/corde : {p['buches_par_corde']} ÷ 32 = {f(I['densite_232'])} bûches/pi², soit {I['buches_selon_232']} bûches.",
           f"- Diamètre implicite : 144 po² ÷ {f(p['densite'], 1)} = {f(I['po2_par_buche'], 1)} po² de face par bûche, vides compris, soit un carré de ≈ {f(I['cote_po'], 1)} po de côté : plausible pour des bûches fendues.",
-          "- Point à vérifier : 4,1 cordes, c'est presque l'achat complet de 2023-24 (4 cordes), alors qu'on supposait qu'il en restait environ 1,5.", "",
+          "- Écart expliqué par Marc : 4,1 cordes, c'est presque l'achat complet de 2023-24 ; il avait arrêté le chauffage au bois pendant une longue période l'hiver dernier et brûlé en priorité le bois de ses propres arbres abattus.", "",
           "## Limites et incertitudes", "",
-          "- Profondeur : aucune mesure. On présume UNE seule rangée de bûches de 16 po vue de face. Avec deux rangées, le total doublerait. À CONFIRMER.",
+          "- Profondeur : UNE seule rangée de bûches de 16 po, confirmée par Marc (la structure triangulaire du bas existe bien en deux exemplaires).",
           "- Longueur des bûches : 16 po, confirmée par Marc le 22 nov. 2026.",
           "- Densité tirée d'un seul échantillon (corde d'étalonnage au milieu du rectangle) ; diamètre des bûches variable ; tassement et vides (bûches croisées aux extrémités, trous).",
           "- Formes simplifiées (croquis approximatif) : pente du début à 45° ; formes du bas = triangles à 45° (confirmé par Marc) ; la hauteur mesurée (3 pi 4 po) a été retenue, alors que des côtés à 45° exacts donneraient 3 pi "
@@ -479,12 +432,12 @@ def texte_inventaire(I, NB_ancien):
           "## Fourchettes", "",
           f"- Fourchette retenue (sensibilité à la densité) : 6,7 bûches/pi² → {I['buches']} ; 7,25 (ratio du projet, 232/corde) → {I['buches_selon_232']}.",
           f"- Tests plus larges (non retenus) : 6,0 → {I['buches_bas']} ; 7,4 → {I['buches_haut']} ; ±15 % → {I['moins15']} à {I['plus15']}.",
-          f"- Fourchette retenue pour le protocole : {p['fourchette_retenue'][0]} à {p['fourchette_retenue'][1]} (central {I['buches']}), à confirmer.", ""]
+          f"- Fourchette retenue pour le protocole : {p['fourchette_retenue'][0]} à {p['fourchette_retenue'][1]} (central {I['buches']}) ; seule la densité reste incertaine.", ""]
     return "\n".join(L)
 
 
 def page_inventaire(quand, P):
-    import inventaire
+    from calculs import inventaire
     I = inventaire.calculer(); p = I["param"]; S = I["sections"]; H = P["hypotheses"]
     sous = f"<p class='sous'>Mesures de Marc du {dfr(p['date'])} 2026 · généré le {E(quand)} par <code>outils/generer_site.py</code> à partir de <code>data/inventaire_pile_2026-11.csv</code>.</p>"
     md = texte_inventaire(I, H["stock_ancien"])
@@ -499,21 +452,21 @@ def page_inventaire(quand, P):
             c = f"{nb(s['largeur_pi'])} × {f2(s['hauteur_pi'])} ÷ 2 = {f2(s['surface_unitaire'])} pi²" + (f" ; × {s['nombre']} = {f2(s['surface'])} pi²" if s["nombre"] > 1 else "")
         det.append(f"<tr><td><b>{E(s['section'])}</b></td><td>{E(s['hypothese_forme'])}</td><td>{c}</td><td class=n>{f2(s['surface'])} × {nb(p['densite'], 1)} = {nb(s['surface'] * p['densite'], 1)}</td><td class=n><b>{s['buches']}</b></td></tr>")
     sens = [("6,0 (test large, non retenu)", 6.0, I["buches_bas"]), ("<b>6,7 (étalonnage de Marc) : central</b>", 6.7, I["buches"]), ("<b>7,25 (232 bûches/corde du projet) : haut de fourchette</b>", 7.25, I["buches_selon_232"]), ("7,4 (test large, non retenu)", 7.4, I["buches_haut"])]
-    h = ["<div class='alerte'><b>Estimation à confirmer par Marc</b> : nombre de rangées en profondeur (une seule présumée) ; densité de 6,7 bûches/pi² tirée d'une seule corde d'étalonnage. "
+    h = ["<div class='info'><b>Hypothèses confirmées par Marc</b> : <b>une seule rangée</b> en profondeur, deux structures triangulaires au bas. Reste incertaine : la densité de 6,7 bûches/pi², tirée d'une seule corde d'étalonnage. "
          "Longueur des bûches : <b>16 po, confirmée</b> par Marc le 22 nov. 2026.</div>",
          "<div class='cartes'>", carte(f"≈ {I['buches']}", "bûches (central)", "prov", sous=f"fourchette {p['fourchette_retenue'][0]}–{p['fourchette_retenue'][1]}"),
          carte(f"{f2(I['surface'])} pi²", "surface de face", "neutre", sous="3 formes, 4 morceaux"),
          carte(nb(I["cordes_face"], 1), "cordes de face (4 × 8 pi)", "neutre", sous=f"{nb(I['cordes_232'], 1)} cordes à {p['buches_par_corde']} bûches/corde"),
          carte(f"{H['stock_ancien']} → {I['buches']}", "stock de départ du protocole", "ko", "protocole.html#revision", "révision du 22 nov. 2026"),
          carte(nb(p["densite"], 1), "bûches par pi² de face", "prov", sous="1 corde d'étalonnage, au milieu du rectangle"), "</div>",
-         "<h2>Croquis de Marc</h2>" + ("<figure><img src='img/croquis-pile.png' alt='Croquis de la pile par Marc' style='max-width:100%;border:1px solid #ddd;border-radius:6px'>"
+         "<h2>Croquis de Marc</h2>" + ("<figure><img class='croquis' src='img/croquis-pile.png' alt='Croquis de la pile par Marc'>"
           "<figcaption class='petit'>Croquis approximatif ; formes du bas = triangles à 45° (confirmé par Marc). Rectangle de 22 pi (repères 12 pi + 10 pi), hauteur moyenne 4 pi 8 po ; "
           "corde d'étalonnage à peu près au milieu ; à gauche, 4 pi en pente à 45° ; en bas, « x2 » : 6 pi de base, 3 pi 4 po au sommet.</figcaption></figure>"
           if os.path.exists(os.path.join(OUT, "img", "croquis-pile.png")) else "<div class='alerte'>Croquis de Marc à ajouter : <code>rapports/img/croquis-pile.png</code> (croquis approximatif ; formes du bas = triangles à 45°).</div>"),
          "<h2>Schéma de la pile (vue de face, à l'échelle)</h2>", schema_svg(S),
          "<h2>Méthode</h2><p>On mesure la <b>face</b> de la pile (largeur × hauteur), on la découpe en formes simples (un rectangle, un triangle en pente, deux triangles isocèles), "
          f"puis on multiplie chaque surface par une <b>densité de face</b> de {nb(p['densite'], 1)} bûches par pi², étalonnée sur une corde de bois située à peu près au milieu du rectangle principal (croquis de Marc, séance de calcul). "
-         "On présume une seule rangée de bûches vue de face.</p>",
+         "La pile ne compte qu'une seule rangée de bûches en profondeur (confirmé par Marc).</p>",
          "<h2>Mesures, hypothèses et calculs</h2><table><tr><th>Section</th><th>Mesures et hypothèse de forme</th><th>Surface</th><th>× densité</th><th>Bûches</th></tr>" + "".join(det) +
          f"<tr class=tot><td>Total</td><td></td><td class=n><b>{f2(I['surface'])} pi²</b></td><td class=n>{nb(I['buches_exact'], 1)}</td><td class=n><b>{I['buches']}</b></td></tr></table>"
          f"<p class='petit'>Le total {I['buches']} est la somme des sections arrondies, comme dans la session ; le calcul exact donne {nb(I['buches_exact'], 1)} (la session dit « 875 à 880 »). "
@@ -529,22 +482,22 @@ def page_inventaire(quand, P):
          f"<tr><td>Volume apparent</td><td>{f2(I['surface'])} pi² × 16 po (1,33 pi)</td><td class=n>{nb(I['volume_pi3'])} pi³ ≈ {nb(I['volume_pi3'] / p['corde_pleine_pi3'], 2)} corde pleine</td></tr></table>"
          "<div class='info'><b>Verdict</b> : les calculs sont cohérents avec la définition d'une corde québécoise. 6,7 bûches/pi² donne 214 bûches par corde, un peu sous les 232 du projet ; "
          "un diamètre implicite d'environ 4,5 po (vides compris) est plausible pour des bûches fendues. L'hypothèse critique est <b>une seule rangée de bûches de 16 po</b> : "
-         "la longueur est confirmée, le nombre de rangées non (deux rangées doubleraient le total). "
-         "<b>Point à vérifier</b> : 4,1 cordes, c'est presque l'achat complet de 2023-24 (4 cordes), alors qu'on supposait qu'il en restait environ 1,5. "
-         "Soit il reste plus de bois qu'on pensait (achat plus gros, ou saisons plus légères), soit la pile est moins dense qu'en apparence.</div>",
+         "la longueur et la rangée unique sont toutes deux confirmées par Marc. "
+         "<b>Écart expliqué</b> : 4,1 cordes, c'est presque l'achat complet de 2023-24, alors qu'on supposait qu'il en restait environ 1,5. "
+         "Marc l'explique : il avait arrêté le chauffage au bois pendant une longue période l'hiver dernier et brûlé en priorité le bois de ses propres arbres abattus. Point résolu.</div>",
          "<h2 id='fourchette'>Fourchette</h2><table><tr><th>Densité (bûches/pi²)</th><th>Calcul</th><th>Bûches</th><th>Cordes (232)</th></tr>" +
          "".join(f"<tr{' class=tot' if d == 6.7 else ''}><td>{lib}</td><td>{f2(I['surface'])} × {nb(d, 2)}</td><td class=n>{b}</td><td class=n>{nb(b / p['buches_par_corde'], 1)}</td></tr>" for lib, d, b in sens) +
          f"<tr><td>±15 % autour du central</td><td>{I['buches']} × 0,85 / × 1,15</td><td class=n>{I['moins15']} à {I['plus15']}</td><td class=n>{nb(I['moins15'] / 232, 1)} à {nb(I['plus15'] / 232, 1)}</td></tr></table>"
          f"<p><b>Retenu pour le protocole</b> : central <b>{I['buches']}</b>, fourchette <b>{p['fourchette_retenue'][0]} à {p['fourchette_retenue'][1]}</b> (densité de 6,7 à 7,25 bûches/pi² : de l'étalonnage de Marc à celle qui correspond aux 232 bûches/corde du projet), "
-         f"à confirmer. La simulation teste aussi {I['buches_bas']} et {I['buches_haut']} : tous les événements restent couverts (<a href='protocole.html#revision'>détail</a>).</p>",
+         f"seule la densité reste incertaine. La simulation teste aussi {I['buches_bas']} et {I['buches_haut']} : tous les événements restent couverts (<a href='protocole.html#revision'>détail</a>).</p>",
          "<h2>Limites</h2><ul>"
-         "<li><b>Profondeur</b> : aucune mesure. Une seule rangée de bûches de 16 po vue de face est présumée. <b>À confirmer.</b></li>"
+         "<li><b>Profondeur</b> : une seule rangée de bûches de 16 po, <b>confirmée par Marc</b>.</li>"
          "<li><b>Densité</b> : un seul échantillon (la corde d'étalonnage au milieu du rectangle) ; elle varie avec le diamètre des bûches et le soin de l'empilage d'un bout à l'autre de la pile.</li>"
          "<li><b>Tassement et vides</b> : extrémités croisées, trous, bûches tordues ; la face ne montre pas l'intérieur.</li>"
          "<li><b>Formes</b> (croquis approximatif) : pente du début à 45° ; formes du bas = triangles à 45° (confirmé par Marc), avec la hauteur mesurée (3 pi 4 po) plutôt que la géométrie à 45° exacts (3 pi).</li>"
          "<li><b>Énergie</b> : le nombre de bûches ne dit pas les kWh ; le projet utilise ≈ " + nb(P["kwh_par_buche"], 1) + " kWh évités par bûche (régression 2023-24).</li></ul>",
-         "<h2>Pour affiner</h2><ol><li>Confirmer le nombre de rangées en profondeur.</li><li>Compter les bûches dans un carré de 2 pi × 2 pi à deux ou trois endroits de la face (densité réelle).</li>"
+         "<h2>Pour affiner</h2><ol><li>Compter les bûches dans un carré de 2 pi × 2 pi à deux ou trois endroits de la face (densité réelle).</li>"
          "<li>Inscrire tout vrai recomptage dans la colonne <code>stock_compte</code> de la saisie ; l'inventaire reste le paramètre de départ daté.</li></ol>",
          "<h2>Fichiers</h2><ul><li>Texte téléchargeable : <a href='inventaire-pile-2026-11.md' download>inventaire-pile-2026-11.md</a> (document de calcul de l'inventaire).</li>"
-         "<li>Données : <code>data/inventaire_pile_2026-11.csv</code> (mesures en pouces) ; calcul : <code>outils/inventaire.py</code>.</li></ul>"]
-    page("inventaire.html", "Inventaire de la pile de bois (22 nov. 2026)", sousnav("inventaire.html") + "".join(h), quand, sous=sous)
+         "<li>Données : <code>data/inventaire_pile_2026-11.csv</code> (mesures en pouces) ; calcul : <code>outils/calculs/inventaire.py</code>.</li></ul>"]
+    page("inventaire.html", "Inventaire de la pile de bois (22 nov. 2026)", "".join(h), quand, sous=sous, contexte="Stratégie · saison 2026-2027")
