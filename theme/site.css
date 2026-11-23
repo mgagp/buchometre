@@ -1,46 +1,71 @@
-/* Bûchomètre : thème sobre (étape 1, avant le relooking).
-   Toute l'apparence vit ici. Le Python n'émet que des classes stables (voir theme/README.md)
-   et des variables --g-* pour les graphiques. Changer l'identité visuelle = modifier ce fichier. */
+/* Bûchomètre : identité « camp de bûcherons cartoon » (jalon 2, issue #2).
+   Toute l'apparence vit ici (variables, typographie, motifs). Le Python n'émet
+   que des classes stables (voir theme/README.md) et des variables --g-* pour
+   les graphiques. Changer l'identité visuelle = modifier ce dossier. */
+
+@font-face{font-family:"Calistoga";src:url("polices/Calistoga-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Nunito Sans";src:url("polices/NunitoSans-Variable.ttf") format("truetype");font-weight:200 1000;font-style:normal;font-display:swap}
+@font-face{font-family:"Nunito Sans";src:url("polices/NunitoSans-Italic-Variable.ttf") format("truetype");font-weight:200 1000;font-style:italic;font-display:swap}
+
 :root{
   /* Interface */
-  --fond:#f6f6f4; --surface:#ffffff; --encre:#222222; --encre-douce:#666666; --ligne:#dddddd; --ligne-douce:#eeeeee;
-  --accent:#8a3b12; --accent-doux:#f4e3d7; --entete:#2f2f2f; --entete-encre:#ffffff;
-  --ok:#2e7d32; --ok-fond:#e8f6ea; --ok-bord:#7cc48a; --ko:#c62828; --ko-fond:#fdecea; --ko-bord:#e59a90;
-  --prov:#ef6c00; --prov-fond:#fff8e1; --prov-bord:#f0c36d; --info-fond:#e3f2fd; --info-bord:#90caf9;
-  --feu:#c2410c; --non:#4b5563;
+  --fond:#F1E6D0; --surface:#FFF8EC; --encre:#24160C; --encre-douce:#5A3F2C;
+  --ligne:#D7B894; --ligne-douce:#EAD9BE;
+  --accent:#8E1A12; --accent-doux:#F8D9C4;
+  --entete:#2A1810; --entete-encre:#FFF4E4;
+  --ok:#1F5E28; --ok-fond:#E6F3E4; --ok-bord:#7CB87A;
+  --ko:#A31D14; --ko-fond:#FDE8E4; --ko-bord:#E39990;
+  --prov:#C05600; --prov-fond:#FFF3D6; --prov-bord:#E0B05A;
+  --info-fond:#E7F0E8; --info-bord:#8FB89A;
+  --feu:#B8330A; --non:#4A3A2E;
+  --sur-vif:#fff;
   /* Calendrier : températures */
-  --t-chaud:#ececec; --t-doux:#dfe5ec; --t-frais:#c3cfdd; --t-froid:#94aac5; --t-tresfroid:#5d7ea6; --t-glacial:#2f4f7a; --t-na:#f7f7f7;
+  --t-chaud:#F0E6D4; --t-doux:#E2D4B8; --t-frais:#B8C8C4;
+  --t-froid:#7A9BB0; --t-tresfroid:#3A5F7A; --t-glacial:#1C3A54; --t-na:#F7F1E6;
   /* Graphiques (clés de rendu/graphes.py) */
-  --g-reel:#1565c0; --g-sansfeu:#c62828; --g-marc:#8e24aa; --g-buche:#ef6c00; --g-temp:#00838f; --g-gris:#9e9e9e; --g-vert:#2e7d32;
-  --g-fond_e:#f3f3f3; --g-ardoise:#455a64; --g-temp_pale:#80cbc4; --g-encre:#000000; --g-gris_bleu:#90a4ae; --g-gris_pale:#b0bec5;
-  --g-bleu_pale:#90caf9; --g-violet_pale:#ce93d8; --g-bleu_fonce:#0d47a1; --g-evt:#c62828; --g-plan:#8d8d8d; --g-reserve:#e07a5f;
-  --g-zone_creux:#dbe9ff; --g-zone_marc:rgba(255,152,0,.18); --g-zone_critique:rgba(33,150,243,.14); --g-cal_sansfeu:#cfd8dc;
-  --g-cal_extrapole:#e0e0e0; --g-pile_rect:#ffb74d; --g-pile_pente:#ffcc80; --g-pile_tri:#ffe0b2; --g-pile_trait:#e65100; --g-axe:#555555; --g-projection:#1565c0;
-  --police:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  --rayon:10px;
+  --g-reel:#1B4F72; --g-sansfeu:#A31D14; --g-marc:#6B3A7A; --g-buche:#C44D00;
+  --g-temp:#2A7A70; --g-gris:#8A7A68; --g-vert:#1F5E28;
+  --g-fond_e:#F3E6C9; --g-ardoise:#4A3A2E; --g-temp_pale:#8FBFB6; --g-encre:#24160C;
+  --g-gris_bleu:#8A9AA0; --g-gris_pale:#C4B8A4; --g-bleu_pale:#9BC0D6; --g-violet_pale:#C9A8D0;
+  --g-bleu_fonce:#0E3A58; --g-evt:#A31D14; --g-plan:#8A7A68; --g-reserve:#C45C3E;
+  --g-zone_creux:#DCE8F0; --g-zone_marc:rgba(196,77,0,.16); --g-zone_critique:rgba(27,79,114,.12);
+  --g-cal_sansfeu:#D4C4B0; --g-cal_extrapole:#E6D8C4;
+  --g-pile_rect:#E0A15A; --g-pile_pente:#E8B878; --g-pile_tri:#F0D0A0; --g-pile_trait:#8E1A12;
+  --g-axe:#5A3F2C; --g-projection:#1B4F72;
+  --police:"Nunito Sans",system-ui,sans-serif;
+  --police-titre:"Calistoga",Georgia,serif;
+  --rayon:8px;
+  --carreaux:url("motifs/plaid.svg");
+  --grain:url("motifs/grain.svg");
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{font-family:var(--police);margin:0;color:var(--encre);background:var(--fond);line-height:1.45}
+body{font-family:var(--police);margin:0;color:var(--encre);background-color:var(--fond);line-height:1.45;
+  background-image:var(--grain),linear-gradient(180deg,rgba(80,40,10,.05),transparent 180px);
+  background-size:240px 160px,auto;background-blend-mode:multiply,normal}
 a{color:var(--accent)}
 /* En-tête et menus */
-header.site{background:var(--entete);color:var(--entete-encre);display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 14px}
-header.site .marque{color:var(--entete-encre);font-weight:800;font-size:19px;text-decoration:none;letter-spacing:.01em}
-header.site .contexte{font-size:12px;opacity:.8;text-align:right}
-nav.menu{display:flex;position:sticky;top:0;z-index:10;background:var(--ligne);gap:1px;border-bottom:1px solid var(--ligne)}
-nav.menu .onglet{flex:1;text-align:center;padding:10px 4px;font-size:14px;color:var(--encre);text-decoration:none;background:var(--ligne-douce)}
-nav.menu .onglet.actif{background:var(--surface);font-weight:700;box-shadow:inset 0 -3px 0 var(--accent)}
+header.site{position:relative;background-color:var(--entete);color:var(--entete-encre);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px 18px;border-bottom:0;
+  background-image:linear-gradient(180deg,rgba(255,220,170,.10),transparent 55%),repeating-linear-gradient(90deg,#2A1810 0 13px,#321C12 13px 14px,#2A1810 14px 26px,#1F120C 26px 27px)}
+header.site::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;background-image:var(--carreaux);background-size:20px 20px;background-repeat:repeat-x;background-position:center;box-shadow:0 1px 0 #E0B06A}
+header.site .marque{display:inline-flex;align-items:center;gap:9px;line-height:1;color:var(--entete-encre);font-family:var(--police-titre);font-weight:400;font-size:22px;text-decoration:none;letter-spacing:.02em}
+header.site .logo{width:28px;height:28px;display:block;flex:none;border-radius:6px}
+header.site .contexte{font-size:12px;opacity:.85;text-align:right}
+nav.menu{display:flex;position:sticky;top:0;z-index:10;background:#C4A574;gap:2px;border-bottom:1px solid var(--ligne)}
+nav.menu .onglet{flex:1;text-align:center;padding:10px 4px;font-size:14px;color:var(--encre);text-decoration:none;background:#EFE0C8;font-weight:650}
+nav.menu .onglet.actif{background:var(--surface);font-weight:700;box-shadow:inset 0 -3px 0 #C01F16}
 nav.sousnav{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--ligne);font-size:13px}
 nav.sousnav .sousnav-titre{color:var(--encre-douce);font-weight:600;margin-right:6px;width:100%}
 nav.sousnav a{padding:3px 9px;border-radius:12px;background:var(--ligne-douce);color:var(--encre);text-decoration:none}
-nav.sousnav a.actif{background:var(--accent);color:#fff}
+nav.sousnav a.actif{background:var(--accent);color:var(--sur-vif)}
 main.contenu{max-width:1200px;margin:0 auto;padding:14px}
 .tableau-de-bord main.contenu{max-width:980px}
-h1{font-size:24px;margin:6px 0 2px}
-h2{margin-top:28px;border-top:2px solid var(--encre);padding-top:6px;font-size:19px}
+h1,h2,.verdict{font-family:var(--police-titre);font-weight:400}
+h1{font-size:28px;margin:8px 0 4px;letter-spacing:.01em}
+h2{margin-top:28px;border-top:2px solid var(--ligne);padding-top:6px;font-size:19px}
 h3{font-size:16px}
 .sous{color:var(--encre-douce);margin-top:0;font-size:13px}
-footer.pied{font-size:12px;color:var(--encre-douce);text-align:center;padding:20px 12px 28px}
+footer.pied{font-size:12px;color:var(--encre-douce);text-align:center;padding:36px 12px 28px;position:relative;background-image:url("motifs/bouts-de-buche.svg");background-repeat:repeat-x;background-position:center 8px;background-size:72px 28px}
 code{background:var(--ligne-douce);padding:1px 4px;border-radius:3px;font-size:.92em}
 /* Blocs du tableau de bord */
 .bloc{background:var(--surface);border:1px solid var(--ligne);border-radius:var(--rayon);padding:12px 14px;margin:12px 0}
@@ -123,7 +148,7 @@ table{border-collapse:collapse;width:100%;margin:8px 0 16px;background:var(--sur
 th,td{border:1px solid var(--ligne);padding:4px 7px;font-size:13px;text-align:left}
 th{background:var(--ligne-douce);position:sticky;top:0}
 td.n{text-align:right;white-space:nowrap}td:first-child{white-space:nowrap}
-tr.e td{background:#f6f6f6;color:#777;font-style:italic}tr.tot td{background:var(--info-fond);font-weight:600}tr.evt td{background:var(--ko-fond)}
+tr.e td{background:var(--ligne-douce);color:var(--encre-douce);font-style:italic}tr.tot td{background:var(--info-fond);font-weight:600}tr.evt td{background:var(--ko-fond)}
 tr:target td{background:var(--prov-fond)}
 table.compact td,table.compact th{font-size:12px}
 .defile{max-height:640px;overflow:auto;border:1px solid var(--ligne)}
@@ -156,3 +181,24 @@ img.croquis{max-width:100%;border:1px solid var(--ligne);border-radius:6px}
 .calendrier td.reco-feu{box-shadow:inset 0 -3px 0 var(--feu)}
 .calendrier td.coeur .num,.calendrier td.coeur{font-weight:700}
 .leg i.reco-feu{box-shadow:inset 0 -3px 0 var(--feu)}
+
+/* Identité camp de bûcherons : cartes, jauges, liens du bas */
+h2.bloc-titre{font-family:var(--police);font-weight:750;letter-spacing:.08em}
+.verdict{font-size:30px}
+.bloc{background:var(--surface);border:1px solid var(--ligne);border-radius:var(--rayon);box-shadow:2px 3px 0 rgba(42,24,16,.08)}
+.bloc-jour{border:2px solid #5D3A1A;box-shadow:0 3px 0 #C01F16, 2px 6px 0 rgba(42,24,16,.08);padding-top:14px}
+.vignette{background:#FFFCF6;border-color:var(--ligne)}
+.vignette.feu{background:var(--accent-doux)}
+.vignette.actif{border-color:#5D3A1A;box-shadow:inset 0 0 0 1px #5D3A1A}
+.liens-bas a{background:var(--surface);border-color:var(--ligne);color:var(--encre);font-weight:700;box-shadow:2px 2px 0 rgba(42,24,16,.08)}
+.liens-bas a:hover{border-color:var(--accent)}
+.jauge{background:var(--ligne-douce)}
+.temps{background:var(--ligne-douce)}
+.graphe{border-color:var(--ligne);background:var(--surface)}
+.pastille{color:var(--sur-vif)}
+.b-ok,.b-ko,.b-prov,.b-gris{color:var(--sur-vif)}
+.t-tresfroid,.t-glacial{color:var(--sur-vif)}
+@media(max-width:700px){
+  h1{font-size:24px}
+  .verdict{font-size:28px}
+}

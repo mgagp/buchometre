@@ -89,7 +89,7 @@ def entete(chemin, contexte=""):
         if chemin.startswith(pref):
             sm = (f"<nav class='sousnav' aria-label='{E(SOUSMENU_TITRE[pref])}'><span class='sousnav-titre'>{E(SOUSMENU_TITRE[pref])}</span>" +
                   "".join(f"<a href='{u}'" + (" class='actif' aria-current='page'" if u == chemin else "") + f">{E(t)}</a>" for u, t in items) + "</nav>")
-    return (f"<header class='site'><a class='marque' href='index.html'>{SITE}</a><span class='contexte'>{contexte}</span></header>"
+    return (f"<header class='site'><a class='marque' href='index.html'><img class='logo' src='assets/favicon.svg' alt=''>{SITE}</a><span class='contexte'>{contexte}</span></header>"
             f"<nav class='menu' aria-label='Menu principal'>{menu}</nav>{sm}")
 
 

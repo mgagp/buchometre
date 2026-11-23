@@ -49,8 +49,8 @@ puis jours les plus froids), avec un stock de bois limité.
 - `outils/rendu/` (chiffres → HTML, **aucune couleur**) : `gabarit.py` (en-tête, menu, liens, redirections),
   `composants.py` (bloc, jauge, barre de temps, calendrier…), `graphes.py` (SVG, couleurs par variables du thème),
   `pages/` (un module par section : `saison`, `journal`, `strategie`, `methode`, `archives_2023`).
-- `theme/` (**apparence seulement**) : `site.css` (variables de couleur, typographie), images ; copié dans `rapports/assets/`.
-  Le relooking ne touche que ce dossier. Classes stables : `theme/README.md`.
+- `theme/` (**apparence seulement**) : `site.css` (variables, typographie), polices OFL, motifs, favicon ; copié dans `rapports/assets/`.
+  L'identité vit dans ce dossier (et, au besoin, le logo dans `outils/rendu/gabarit.py`). Classes stables : `theme/README.md`.
 - Points d'entrée : `outils/preparer_donnees.py`, `outils/generer_site.py`, `outils/verifier_site.py`,
   `outils/enregistrer_recommandation.py` (ligne du jour dans l'historique ; appelé par le workflow du matin).
 - `rapports/` : site généré, **non versionné** (sauf `rapports/img/`). GitHub Actions le reconstruit et le publie à chaque

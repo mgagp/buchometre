@@ -1,4 +1,4 @@
-# buchometre
+# <img src="theme/favicon.svg" alt="" width="32" height="32"> buchometre
 
 [![Publier le site](https://github.com/mgagp/buchometre/actions/workflows/pages.yml/badge.svg)](https://github.com/mgagp/buchometre/actions/workflows/pages.yml)
 
