@@ -18,7 +18,8 @@ SOURCES = [
     ("Hydro-Québec, Grille des tarifs 2026 (hausse au 1er avril 2026)", "https://www.hydroquebec.com/data/documents-donnees/pdf/grille-tarifaire.pdf"),
     ("Hydro-Québec, données ouvertes « Événements de pointe – saison hivernale » (TPC-DPC = Flex D, CPC-D = crédit hivernal)", "https://donnees.hydroquebec.com/explore/dataset/evenements-pointe/"),
     ("Hydro-Québec, Historique des résultats (bilan par hiver)", "https://www.hydroquebec.com/residentiel/mieux-consommer/pourquoi-mieux-consommer/bilan-efforts-collectifs/historique-resultats.html"),
-    ("Open-Meteo, API d'archives historiques (réanalyse ERA5), point 45,40 N / −74,03 O (Vaudreuil-Dorion)", "https://open-meteo.com/en/docs/historical-weather-api"),
+    ("Environnement Canada, données climatiques quotidiennes (API GeoMet climate-daily), station Ste-Anne-de-Bellevue 1 (702FHL8), repli Montréal-Trudeau (7025251)", "https://api.weather.gc.ca/collections/climate-daily"),
+    ("Open-Meteo, API d'archives (modèle ECMWF IFS), point 45,40 N / −74,03 O : dernier repli, étiqueté « estimation par modèle »", "https://open-meteo.com/en/docs/historical-weather-api"),
     ("Environnement Canada, prévisions pour Vaudreuil-Dorion (recommandation du jour ; Open-Meteo en secours)", "https://meteo.gc.ca/fr/location/index.html?coords=45.4,-74.04"),
 ]
 
@@ -43,7 +44,7 @@ def main(quand, a_faire=""):
     V = P["valeur_buche"]; SE = P["seuils"]; C = P["critique"]; SC = P["stats_creux"]; R = P["resume_sim"]
     MJ = lire("data/protocole_meteo_jours.csv"); CR = lire("data/protocole_creux.csv"); SIM = lire("data/protocole_simulation.csv")
     sous = (f"<p class='sous'>Généré le {E(quand)} par <code>outils/rendu/pages/strategie.py</code>. "
-            f"Sources consultées le 2026-11-22 ; météo Open-Meteo jusqu'au {E(P['meteo_derniere_date'])}.</p>")
+            f"Sources consultées le 2026-11-22 ; météo observée (Environnement Canada) jusqu'au {E(P['meteo_derniere_date'])}.</p>")
     complets = ["2023-2024", "2024-2025", "2025-2026"]
     n_creux = [SC[h]["n"] for h in complets]
     cible_val = [R[h]["strategies"]["cible"]["valeur"] for h in complets]

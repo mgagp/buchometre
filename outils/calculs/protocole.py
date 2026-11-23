@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Analyse du protocole hiver 2026-2027 (appelé par preparer_donnees.py, ou seul).
 
-Lit sources/meteo_open-meteo_vaudreuil_2023-2026.json, sources/hq_evenements_pointe.csv, data/modele.json,
+Lit la météo observée (calculs/meteo.py), sources/hq_evenements_pointe.csv, data/modele.json,
 data/saisie_2026-2027.csv ; écrit data/protocole.json, data/protocole_meteo_jours.csv, data/protocole_creux.csv,
 data/protocole_simulation.csv, data/saisie_2026-2027_enrichie.csv.
 Bibliothèque standard seulement.
@@ -57,13 +57,9 @@ def jdate(s):
 
 
 def charger_meteo():
-    d = json.load(open(S("meteo_open-meteo_vaudreuil_2023-2026.json"), encoding="utf-8"))["daily"]
-    M = {}
-    for i, t in enumerate(d["time"]):
-        if d["temperature_2m_mean"][i] is None:
-            continue
-        M[jdate(t)] = {"t": d["temperature_2m_mean"][i], "tmin": d["temperature_2m_min"][i], "tmax": d["temperature_2m_max"][i]}
-    return M
+    """Météo observée canonique (calculs/meteo.py : EC Ste-Anne-de-Bellevue 1, repli Trudeau, puis modèle) : date → {t, tmin, tmax}."""
+    from calculs import meteo
+    return {d: {"t": v["t"], "tmin": v["tmin"], "tmax": v["tmax"]} for d, v in meteo.observee().items()}
 
 
 def charger_evenements():

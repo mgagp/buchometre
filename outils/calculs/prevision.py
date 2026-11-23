@@ -5,8 +5,8 @@ Open-Meteo en secours (et pour les jours que le bulletin ne couvre pas). Les fic
 « preparer_donnees.py --maj » dans sources/ ; sans téléchargement, les fichiers versionnés servent (souvent périmés,
 donc sans jour « aujourd'hui » : la recommandation passe alors en mode ouvert, de façon visible).
 
-Température moyenne d'un jour selon Environnement Canada : (maximum du jour + moyenne des minimums de la nuit
-précédente et de la nuit suivante) / 2, ou avec le seul minimum connu.
+Température moyenne d'un jour selon Environnement Canada : (maximum + minimum) / 2, la même définition que la météo
+observée (calculs/meteo.py) ; minimum = celui de la nuit précédente (petit matin), sinon celui de la nuit suivante.
 """
 import json, os, datetime as dt
 from chemins import SOURCES
@@ -42,10 +42,11 @@ def lire_ec(p=None):
                 (bas if _val(tp["class"]) == "low" else hauts)[d] = float(v)
         out = {}
         for d, tmax in hauts.items():
-            mins = [x for x in (bas.get(d - dt.timedelta(days=1)), bas.get(d)) if x is not None]
-            if not mins:
+            # minimum du jour : celui de la nuit précédente (petit matin), sinon celui de la nuit suivante
+            tmin = bas.get(d - dt.timedelta(days=1), bas.get(d))
+            if tmin is None:
                 continue
-            out[d] = {"t": (tmax + sum(mins) / len(mins)) / 2, "tmin": mins[0], "tmax": tmax}
+            out[d] = {"t": (tmax + tmin) / 2, "tmin": tmin, "tmax": tmax}
         return out, emis.strftime("%Y-%m-%d %H:%M")
     except (OSError, ValueError, KeyError, TypeError, IndexError):
         return {}, None

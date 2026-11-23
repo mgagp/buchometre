@@ -27,6 +27,15 @@ def rendre(e, quand):
              f"<a href='data/{E(fichier_reco(sa))}'>data/{E(fichier_reco(sa))}</a> (un commit automatique par jour). Fait : bûches saisies. "
              "« Suivi » : feu recommandé et fait, ou pas de feu recommandé et aucun feu.</p>" if th else
              "<p class='vide'>Aucune recommandation enregistrée pour l'instant : la première sera conservée au prochain matin.</p>"))
+    mo = e["meteo_observee"][::-1]
+    if mo:
+        h.append("<h2 id='meteo'>Météo observée (30 derniers jours)</h2><table class='compact'><tr><th>Date</th><th>Min</th><th>Max</th><th>Moyenne</th><th>Source</th></tr>" +
+                 "".join(f"<tr><td>{dfr(x['date'], jour=True)}</td><td class=n>{nb(x['tmin'], 1)}</td><td class=n>{nb(x['tmax'], 1)}</td><td class=n>{nb(x['t'], 1)}</td>"
+                         f"<td>{E(x['etiquette'])}</td></tr>" for x in mo) + "</table>"
+                 f"<p class='petit'>Source canonique : {E(e['meteo_libelle'])}, données climatiques quotidiennes ; moyenne = (max + min) / 2. "
+                 "Les 30 derniers jours sont retéléchargés chaque matin (révisions d'Environnement Canada acceptées) dans "
+                 f"<a href='data/{E(e['saison'].get('meteo_observee', ''))}'>data/{E(e['saison'].get('meteo_observee', ''))}</a>. "
+                 "Un jour sans mesure (station en panne, ou pas encore publié) est complété par Open-Meteo et marqué « estimation par modèle ».</p>")
     h.append("<h2 id='jours'>Toutes les journées saisies</h2>")
     if S:
         h.append("<table><tr><th>Date</th><th>Bûches</th><th>Stock restant</th><th>kWh</th><th>Événement</th><th>Témoin</th><th>T moy.</th><th>kWh attendus</th><th>Écart</th><th>Valeur</th><th>Remarque</th></tr>" +

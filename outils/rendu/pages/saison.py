@@ -85,6 +85,7 @@ def bloc_jour(e):
     corps = (alertes + f"<p class='verdict {cl}'>{verdict}</p>{evt}<p class='raison'>{E(raison)}{'' if raison.endswith('.') else '.'}{moment}"
              + (f" <span class='petit'>({detail})</span>" if detail else "") + "</p>"
              f"<div class='vignettes'>{''.join(vign)}</div>"
+             + (f"<p class='petit'>Hier, observé : min {_t(r[0]['tmin'])}, max {_t(r[0]['tmax'])}, moyenne {_t(r[0]['t'])} ({E(r[0]['source'] or '')}).</p>" if r[0]["tmin"] is not None else "")
              + (f"<p class='petit'>{E(cr)}</p>" if cr else "")
              + f"<p class='source'>{src}. Règle de budget du protocole, événements annoncés par Hydro-Québec ; l'avis officiel d'Hydro-Québec a priorité.</p>")
     return bloc(f"Aujourd'hui · {dfr(auj['date'], jour=True)}", corps, "bloc-jour", "aujourdhui", ("strategie/index.html#regles", "règles"))

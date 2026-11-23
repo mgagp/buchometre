@@ -7,7 +7,7 @@ Lit sources/ (copies en lecture seule du chiffrier « Bois de chauffage » et de
 et écrit data/ :
   journal_brut.csv      fidèle au chiffrier (Feuille 1), une ligne par ligne de feuille, totaux compris
   journal_nettoye.csv   une ligne par jour, drapeau mesure/extrapole, météo, anomalies, modèle
-  meteo.csv             météo quotidienne Open-Meteo (archive ERA5) pour Vaudreuil-Dorion
+  meteo.csv             météo quotidienne observée (EC Ste-Anne-de-Bellevue 1) pour 2023-24
   factures.csv          factures Hydro (Feuille 2)
   anomalies.csv         une ligne par anomalie détectée
   modele.json           coefficients et incertitudes du modèle kWh ~ degrés-jours + bûches
@@ -75,15 +75,21 @@ def main():
     gt = list(csv.reader(open(S("bois_Feuille1_G-T_valeurs.csv"), encoding="utf-8")))
     entete = af[0][1:] + gt[0]
     entete = ["Drapeau"] + entete[:]  # colonne A du chiffrier (« E » = extrapolé)
+    # Température : météo observée canonique (calculs/meteo.py, EC Ste-Anne-de-Bellevue 1, moyenne = (max + min) / 2).
+    # Vent et rayonnement : Open-Meteo 2023-24 (estimation par modèle), à titre d'information seulement.
+    from calculs import meteo as METEO
+    obs = METEO.observee()
     meteo = json.load(open(S("meteo_open-meteo_vaudreuil_2023-2024.json"), encoding="utf-8"))
     md = meteo["daily"]
-    MET = {d: {"t_moy": md["temperature_2m_mean"][i], "t_min": md["temperature_2m_min"][i],
-               "t_max": md["temperature_2m_max"][i], "vent_max": md["wind_speed_10m_max"][i],
-               "rayonnement": md["shortwave_radiation_sum"][i]} for i, d in enumerate(md["time"])}
+    MET = {}
+    for i, d in enumerate(md["time"]):
+        o = obs[dt.date.fromisoformat(d)]
+        MET[d] = {"t_moy": o["t"], "t_min": o["tmin"], "t_max": o["tmax"], "station": o["station"],
+                  "vent_max": md["wind_speed_10m_max"][i], "rayonnement": md["shortwave_radiation_sum"][i]}
     with open(D("meteo.csv"), "w", newline="", encoding="utf-8") as fo:
-        w = csv.writer(fo); w.writerow(["date", "t_moy", "t_min", "t_max", "vent_max_kmh", "rayonnement_MJ_m2", "dj18"])
+        w = csv.writer(fo); w.writerow(["date", "t_moy", "t_min", "t_max", "station", "vent_max_kmh_modele", "rayonnement_MJ_m2_modele", "dj18"])
         for d in md["time"]:
-            m = MET[d]; w.writerow([d, m["t_moy"], m["t_min"], m["t_max"], m["vent_max"], m["rayonnement"], round(max(BASE_DJ - m["t_moy"], 0), 1)])
+            m = MET[d]; w.writerow([d, m["t_moy"], m["t_min"], m["t_max"], m["station"], m["vent_max"], m["rayonnement"], round(max(BASE_DJ - m["t_moy"], 0), 1)])
 
     # ---------- journal brut (fidèle) ----------
     brut, jours = [], []
@@ -127,7 +133,7 @@ def main():
             ano(j, "sans_feu_ecart", f"Aucun feu mais kWh estimés {j['e']:.0f} ≠ réels {j['k']:.0f}")
         m = MET.get(j["date"].isoformat())
         if mesure and m and abs(j["t"] - m["t_moy"]) >= 6:
-            ano(j, "temp_ecart", f"Température notée {j['t']:.0f} °C vs moyenne Open-Meteo {m['t_moy']:.1f} °C")
+            ano(j, "temp_ecart", f"Température notée {j['t']:.0f} °C vs moyenne EC {m['t_moy']:.1f} °C")
     with open(D("anomalies.csv"), "w", newline="", encoding="utf-8") as fo:
         w = csv.DictWriter(fo, ["date", "ligne", "code", "detail"]); w.writeheader(); w.writerows(anomalies)
 
@@ -166,7 +172,7 @@ def main():
     with open(D("journal_nettoye.csv"), "w", newline="", encoding="utf-8") as fo:
         w = csv.writer(fo)
         w.writerow(["date", "mois", "jour_semaine", "statut", "feu", "nb_buches", "kwh_reel", "kwh_eq_marc", "temp_marc",
-                    "t_moy_om", "t_min_om", "t_max_om", "dj18", "kwh_attendu_modele", "kwh_sans_feu_modele",
+                    "t_moy_ref", "t_min_ref", "t_max_ref", "dj18", "kwh_attendu_modele", "kwh_sans_feu_modele",
                     "kwh_evites_modele", "kwh_evites_marc", "eco_modele_ht", "eco_modele_ttc", "eco_feuille_marc", "anomalies"])
         js = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"]
         for j in jours:
@@ -210,7 +216,8 @@ def main():
                "kwh_par_buche": kwh_buche, "se_kwh_par_buche": se_b, "kwh_par_buche_bas": bas, "kwh_par_buche_haut": haut,
                "kwh_par_buche_avec_veille": lag1, "kwh_par_buche_avec_veille_dj": lag2,
                "modeles": modeles, "controle_facture": controle, "saison": saison,
-               "meteo_source": {"api": "Open-Meteo archive (réanalyse ERA5)", "lat": meteo["latitude"], "lon": meteo["longitude"],
+               "meteo_source": {"api": "Environnement Canada, données climatiques quotidiennes (GeoMet climate-daily)",
+                                "station": METEO.LIBELLE, "moyenne": "(max + min) / 2",
                                 "lieu_hypothese": "Vaudreuil-Dorion (QC)"}},
               open(D("modele.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"{len(jours)} jours ({len(mes)} mesurés), {len(anomalies)} anomalies, {kwh_buche:.2f} kWh/bûche ± {se_b:.2f}")
@@ -272,5 +279,14 @@ def mettre_a_jour_sources():
     for nom, (url, dest, val) in srcs.items():
         statut["sources"][nom] = _telecharger(url, dest, val)
         print(f"--maj {nom} :", "ok" if statut["sources"][nom]["ok"] else "ÉCHEC, données versionnées gardées (" + statut["sources"][nom]["erreur"] + ")")
+    # météo observée canonique : EC, 30 derniers jours retéléchargés dans data/meteo_observee_AAAA-AAAA.csv (révisions acceptées)
+    from calculs import meteo, saisons
+    try:
+        statut["sources"]["meteo_observee"] = meteo.mettre_a_jour(saisons.courante())
+    except Exception as e:
+        statut["sources"]["meteo_observee"] = {"ok": False, "erreur": f"{type(e).__name__}: {e}"[:300]}
+    m = statut["sources"]["meteo_observee"]
+    print("--maj meteo_observee :", "hors saison, rien à faire" if m.get("hors_saison") else
+          f"ok ({m['jours']} jours depuis le {m['de']}, {m['revises']} révisé(s))" if m["ok"] else "ÉCHEC, fichier versionné gardé (" + m["erreur"] + ")")
     json.dump(statut, open(S("maj_statut.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     return statut

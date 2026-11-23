@@ -6,7 +6,7 @@
    "resume": "Saison d'origine : chiffrier quotidien de Marc (bûches, kWh), modèle de 4,5 kWh évités par bûche."},
   {"id": "2026-2027", "type": "suivi", "titre": "Saison 2026-2027", "debut": "2026-11-01", "fin": "2027-03-31",
    "debut_suivi": "2026-12-01", "flex_d": ["2026-12-01", "2027-03-31"], "plafond_heures_evt": 120,
-   "saisie": "saisie_2026-2027.csv", "saisie_enrichie": "saisie_2026-2027_enrichie.csv", "recommandations": "recommandations_2026-2027.csv",
+   "saisie": "saisie_2026-2027.csv", "saisie_enrichie": "saisie_2026-2027_enrichie.csv", "recommandations": "recommandations_2026-2027.csv", "meteo_observee": "meteo_observee_2026-2027.csv",
    "inventaire": "inventaire_pile_2026-11.csv", "plan_meteo": "2024-2025",
    "resume": "Premier hiver au tarif Flex D ; stock mesuré de 876 bûches ; protocole « événements d'abord »."}
  ]

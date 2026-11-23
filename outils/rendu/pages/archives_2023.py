@@ -7,6 +7,7 @@ import csv, json, os, html, datetime as dt
 from chemins import RACINE
 from rendu import graphes as svg
 from rendu import gabarit
+from rendu.gabarit import DEPOT
 from rendu.composants import carte, argent, nb, pct
 
 E = html.escape
@@ -41,7 +42,7 @@ def main(quand):
     J = lire("data/journal_nettoye.csv")
     for j in J:
         j["date"] = dt.date.fromisoformat(j["date"])
-        for k in ("nb_buches", "kwh_reel", "kwh_eq_marc", "temp_marc", "t_moy_om", "t_min_om", "t_max_om", "dj18",
+        for k in ("nb_buches", "kwh_reel", "kwh_eq_marc", "temp_marc", "t_moy_ref", "t_min_ref", "t_max_ref", "dj18",
                   "kwh_attendu_modele", "kwh_sans_feu_modele", "kwh_evites_modele", "kwh_evites_marc", "eco_modele_ht",
                   "eco_modele_ttc", "eco_feuille_marc"):
             j[k] = n(j[k])
@@ -84,17 +85,17 @@ def main(quand):
     ], titre_g="kWh / jour", titre_d="bûches", zones=zones, liens=[lien_jour(j) for j in J], h=340)
     g_temp = svg.series(labels, [
         {"nom": "Température notée (Marc)", "valeurs": [j["temp_marc"] if j["mesure"] else None for j in J], "couleur": "ardoise", "points": False},
-        {"nom": "Moyenne Open-Meteo", "valeurs": [j["t_moy_om"] for j in J], "couleur": svg.COUL["temp"], "points": False},
-        {"nom": "Min Open-Meteo", "valeurs": [j["t_min_om"] for j in J], "couleur": "temp_pale", "pointille": True, "epaisseur": 1, "points": False},
+        {"nom": "Moyenne EC (Ste-Anne)", "valeurs": [j["t_moy_ref"] for j in J], "couleur": svg.COUL["temp"], "points": False},
+        {"nom": "Min EC (Ste-Anne)", "valeurs": [j["t_min_ref"] for j in J], "couleur": "temp_pale", "pointille": True, "epaisseur": 1, "points": False},
     ], titre_g="°C", zones=zones, h=220)
     c0, cdj, cb = MOD["modeles"]["principal"]["coef"]
     g_nuage = svg.nuage([
-        {"nom": "Jours sans feu", "couleur": svg.COUL["gris"], "points": [(j["t_moy_om"], j["kwh_reel"], f"{j['date']} : {j['kwh_reel']:.0f} kWh, {j['t_moy_om']} °C, 0 bûche") for j in sansfeu]},
-        {"nom": "Jours avec feu", "couleur": svg.COUL["buche"], "points": [(j["t_moy_om"], j["kwh_reel"], f"{j['date']} : {j['kwh_reel']:.0f} kWh, {j['t_moy_om']} °C, {j['nb_buches']:.0f} bûches") for j in feu]},
+        {"nom": "Jours sans feu", "couleur": svg.COUL["gris"], "points": [(j["t_moy_ref"], j["kwh_reel"], f"{j['date']} : {j['kwh_reel']:.0f} kWh, {j['t_moy_ref']} °C, 0 bûche") for j in sansfeu]},
+        {"nom": "Jours avec feu", "couleur": svg.COUL["buche"], "points": [(j["t_moy_ref"], j["kwh_reel"], f"{j['date']} : {j['kwh_reel']:.0f} kWh, {j['t_moy_ref']} °C, {j['nb_buches']:.0f} bûches") for j in feu]},
     ], [
         {"nom": "Modèle 0 bûche", "couleur": svg.COUL["sansfeu"], "x0": -16, "x1": 10, "f": lambda t: c0 + cdj * max(18 - t, 0)},
         {"nom": "Modèle 10 bûches", "couleur": svg.COUL["buche"], "pointille": True, "x0": -16, "x1": 10, "f": lambda t: c0 + cdj * max(18 - t, 0) + cb * 10},
-    ], tx="Température moyenne du jour (°C, Open-Meteo)", ty="kWh réels du jour", xlim=(-16, 10), ylim=(0, 120))
+    ], tx="Température moyenne du jour (°C, Environnement Canada)", ty="kWh réels du jour", xlim=(-16, 10), ylim=(0, 120))
     g_buche = svg.nuage([
         {"nom": "kWh évités selon le chiffrier (eq − réel)", "couleur": svg.COUL["marc"], "points": [(j["nb_buches"], j["kwh_evites_marc"], f"{j['date']} : {j['nb_buches']:.0f} bûches, {j['kwh_evites_marc']:.0f} kWh") for j in mes]},
     ], [{"nom": f"Modèle : {nb(kb, 1)} kWh par bûche", "couleur": svg.COUL["sansfeu"], "x0": 0, "x1": 15, "f": lambda b: kb * b}],
@@ -122,7 +123,7 @@ def main(quand):
                  sansfeu=sum(j["kwh_sans_feu_modele"] for j in ms), ev=sum(j["kwh_evites_modele"] for j in ms),
                  ev_m=sum(j["kwh_evites_marc"] for j in ms), eco=sum(j["eco_modele_ttc"] for j in ms),
                  eco_m=sum(j["eco_feuille_marc"] or 0 for j in js), eco_m_ext=sum(j["eco_feuille_marc"] or 0 for j in js if not j["mesure"]),
-                 t=(sum(j["t_moy_om"] for j in ms) / len(ms)) if ms else None, dj=sum(j["dj18"] for j in ms),
+                 t=(sum(j["t_moy_ref"] for j in ms) / len(ms)) if ms else None, dj=sum(j["dj18"] for j in ms),
                  dj_all=sum(j["dj18"] for j in js))
     ML = list(mois.values())
     g_mois = svg.series([MOIS[m["m"]] for m in ML], [
@@ -190,7 +191,7 @@ def main(quand):
                 f"<span class='barre' style='width:{j['nb_buches'] * 4:.0f}px'></span></td><td class=n>{nb(j['kwh_reel'])}</td>"
                 f"<td class=n>{nb(j['kwh_eq_marc'])}</td><td class=n>{nb(j['kwh_sans_feu_modele'])}</td><td class=n>{nb(j['kwh_attendu_modele'])}</td>"
                 f"<td class=n>{nb(j['kwh_evites_modele'], 1)}</td><td class=n>{nb(j['kwh_evites_marc'])}</td>"
-                f"<td class=n>{nb(j['temp_marc'])}</td><td class=n>{nb(j['t_moy_om'], 1)}</td><td class=n>{nb(j['t_min_om'], 1)} / {nb(j['t_max_om'], 1)}</td>"
+                f"<td class=n>{nb(j['temp_marc'])}</td><td class=n>{nb(j['t_moy_ref'], 1)}</td><td class=n>{nb(j['t_min_ref'], 1)} / {nb(j['t_max_ref'], 1)}</td>"
                 f"<td class=n>{argent(j['eco_modele_ttc'])}</td><td class=n>{argent(j['eco_feuille_marc'])}</td><td>{badges}</td></tr>")
     ENT = ("<tr><th>Jour</th><th>Bûches</th><th>kWh réels</th><th>kWh eq (chiffrier)</th><th>kWh sans feu (modèle)</th><th>kWh attendus (modèle)</th>"
            "<th>kWh évités (modèle)</th><th>kWh évités (chiffrier)</th><th>T notée</th><th>T moy. OM</th><th>min / max OM</th>"
@@ -203,7 +204,7 @@ def main(quand):
             {"nom": "kWh réels", "valeurs": [j["kwh_reel"] if j["mesure"] else None for j in js], "couleur": svg.COUL["reel"]},
             {"nom": "kWh sans feu (modèle)", "valeurs": [j["kwh_sans_feu_modele"] if j["mesure"] else None for j in js], "couleur": svg.COUL["sansfeu"]},
             {"nom": "kWh eq (chiffrier)", "valeurs": [j["kwh_eq_marc"] for j in js], "couleur": svg.COUL["marc"], "pointille": True, "epaisseur": 1.3},
-            {"nom": "T moy. °C (axe droit)", "valeurs": [j["t_moy_om"] for j in js], "couleur": svg.COUL["temp"], "axe": "d", "epaisseur": 1, "points": False},
+            {"nom": "T moy. °C (axe droit)", "valeurs": [j["t_moy_ref"] for j in js], "couleur": svg.COUL["temp"], "axe": "d", "epaisseur": 1, "points": False},
         ], titre_g="kWh", titre_d="bûches / °C", liens=[f"#j-{j['date']}" for j in js], h=320)
         prec = f"<a href='mois-{cles[k - 1]}.html'>← {MOIS[cles[k - 1]]}</a>" if k else ""
         suiv = f"<a href='mois-{cles[k + 1]}.html'>{MOIS[cles[k + 1]]} →</a>" if k + 1 < len(cles) else ""
@@ -224,15 +225,15 @@ def main(quand):
             return "cal_sansfeu"
         return svg.intensite("buche", 0.25 + 0.75 * r)
     cal = svg.calendrier(J, lambda j: j["nb_buches"] or 0, couleur,
-                         lambda j: f"{j['date']} : {j['nb_buches']:.0f} bûches, {j['kwh_reel']:.0f} kWh, {j['t_moy_om']} °C" + (" (extrapolé)" if not j["mesure"] else ""),
+                         lambda j: f"{j['date']} : {j['nb_buches']:.0f} bûches, {j['kwh_reel']:.0f} kWh, {j['t_moy_ref']} °C" + (" (extrapolé)" if not j["mesure"] else ""),
                          lien_jour)
     top = sorted(mes, key=lambda j: -j["kwh_evites_modele"])[:5]
-    froid = sorted(mes, key=lambda j: j["t_moy_om"])[:5]
+    froid = sorted(mes, key=lambda j: j["t_moy_ref"])[:5]
     corps = ("<p>Calendrier : intensité orange = nombre de bûches ; gris-bleu = jour sans feu ; gris pâle = extrapolé. Un clic ouvre la journée dans sa page mensuelle.</p>" + cal +
              "<div class='deux'><div><h3>Les 5 jours au plus de bûches</h3><ul>" +
-             "".join(f"<li><a href='{lien_jour(j)}'>{j['date']}</a> : {j['nb_buches']:.0f} bûches, {j['kwh_reel']:.0f} kWh réels, {j['t_moy_om']} °C</li>" for j in top) +
+             "".join(f"<li><a href='{lien_jour(j)}'>{j['date']}</a> : {j['nb_buches']:.0f} bûches, {j['kwh_reel']:.0f} kWh réels, {j['t_moy_ref']} °C</li>" for j in top) +
              "</ul></div><div><h3>Les 5 jours les plus froids</h3><ul>" +
-             "".join(f"<li><a href='{lien_jour(j)}'>{j['date']}</a> : {j['t_moy_om']} °C, {j['nb_buches']:.0f} bûches, {j['kwh_reel']:.0f} kWh</li>" for j in froid) +
+             "".join(f"<li><a href='{lien_jour(j)}'>{j['date']}</a> : {j['t_moy_ref']} °C, {j['nb_buches']:.0f} bûches, {j['kwh_reel']:.0f} kWh</li>" for j in froid) +
              "</ul></div></div><h2>Tous les jours</h2><div class='defile'><table>" + ENT + "".join(ligne_jour(j) for j in J) + "</table></div>")
     page("jours.html", "Jour par jour", corps, quand)
 
@@ -282,7 +283,7 @@ def main(quand):
     effets = {"extrapole": "Exclues de l'analyse (17 févr. → 31 mars)", "eco_sans_buche": f"{argent(eco_E_fev)} d'économie comptée dans ta feuille sans mesure",
               "tarif_vide": "Coût de ces jours = 0 $ ; sans effet sur l'économie (mars à 0)", "palier_errone": "Effet de quelques sous",
               "feu_sans_gain": "Économie nulle ces jours-là dans ta feuille ; le modèle leur en donne une", "sans_feu_ecart": "1 kWh d'écart, négligeable",
-              "temp_ecart": "Sans effet : le modèle utilise la météo Open-Meteo"}
+              "temp_ecart": "Sans effet : le modèle utilise la météo observée d'Environnement Canada"}
     for code, nbr in cnt.most_common():
         tq.append(f"<tr><td>{E(libelles.get(code, code))}</td><td class=n>{nbr}</td><td>{E(effets.get(code, ''))}</td></tr>")
     tq.append("</table>")
@@ -293,16 +294,16 @@ def main(quand):
         ta.append(f"<tr><td><a href='mois-{a['date'][:7]}.html#j-{a['date']}'>{a['date']}</a></td><td class=n>{a['ligne']}</td><td>{E(a['code'])}</td><td>{E(a['detail'])}</td></tr>")
     ta.append("</table></div>")
     r_t = MOD.get("corr_temp")
-    diffs = [j["temp_marc"] - j["t_moy_om"] for j in mes]
+    diffs = [j["temp_marc"] - j["t_moy_ref"] for j in mes]
     corps = ("<div class='cartes'>" + carte(f"{len(mes)}/{len(J)}", "jours réellement mesurés", "neutre", sous=f"{mes[0]['date']} → {mes[-1]['date']}") +
              carte("0", "jour manquant dans la période mesurée", "ok") +
              carte(f"{CF['ecart_pct']:+.1f} %".replace(".", ","), "kWh du journal vs facture", "ok", "factures.html") +
-             carte(nb(sum(diffs) / len(diffs), 1) + " °C", "écart moyen T notée − T Open-Meteo", "ok", sous="ta température ≈ moyenne du jour") +
+             carte(nb(sum(diffs) / len(diffs), 1) + " °C", "écart moyen T notée − T EC", "ok", sous="ta température ≈ moyenne du jour") +
              carte(nb(len(feu) and sum(1 for j in feu if j['kwh_eq_marc'] <= j['kwh_reel'])), "jours de feu sans gain dans ta feuille", "prov") + "</div>" +
              "<h2>Constats</h2>" + "".join(tq) +
              "<h2>Ce que l'on peut confirmer</h2><ul>"
              f"<li><b>kWh réels</b> : confirmés par la facture du 17 nov. au 18 janv. (écart {nb(CF['ecart_pct'], 1)} %). Ils viennent manifestement de l'Espace client Hydro.</li>"
-             "<li><b>Températures</b> : entiers notés à la main, cohérents avec la moyenne quotidienne Open-Meteo (réanalyse ERA5, point près de Vaudreuil-Dorion). "
+             "<li><b>Températures</b> : entiers notés à la main, cohérents avec la moyenne quotidienne d'Environnement Canada (station Ste-Anne-de-Bellevue 1, (max + min) / 2). "
              "Le modèle utilise la météo publique, plus fine (au dixième de degré) et disponible aussi pour les jours « E ».</li>"
              "<li><b>Bûches</b> : aucune source externe pour les vérifier ; la relation très nette bûches → baisse de kWh (voir Méthode) les rend crédibles.</li>"
              "<li><b>« kWh eq estimé »</b> : saisi à la main (souvent 75, 80, 85, 90…), parfois en formule (=35+réel, =40+réel). "
@@ -321,7 +322,7 @@ def main(quand):
         return (f"<tr><td>{E(nom)}</td><td>" + ", ".join(f"{E(x)} = {nb(c, 2)} (± {nb(s, 2)})" for x, c, s in zip(noms, m["coef"], m["se"])) +
                 f"</td><td class=n>{nb(m['r2'], 2)}</td><td class=n>{nb(m['rmse'], 1)}</td><td class=n>{m['n']}</td></tr>")
     tm = ("<table><tr><th>Variante</th><th>Coefficients (erreur-type)</th><th>R²</th><th>Écart-type résiduel (kWh)</th><th>n</th></tr>" +
-          lm("Principal : kWh ~ degrés-jours + bûches (météo Open-Meteo)", M["principal"], ["constante", "kWh/degré-jour", "kWh/bûche"]) +
+          lm("Principal : kWh ~ degrés-jours + bûches (météo EC Ste-Anne-de-Bellevue 1)", M["principal"], ["constante", "kWh/degré-jour", "kWh/bûche"]) +
           lm("Même modèle, avec ta température notée", M["temp_marc"], ["constante", "kWh/degré-jour", "kWh/bûche"]) +
           lm("Avec les bûches de la veille", M["avec_veille"], ["constante", "kWh/degré-jour", "bûches du jour", "bûches de la veille"]) +
           lm("Avec bûches et froid de la veille", M["avec_veille_dj"], ["constante", "kWh/degré-jour", "bûches du jour", "bûches de la veille", "degrés-jours veille"]) +
@@ -331,7 +332,7 @@ def main(quand):
              "<h2>Approche du chiffrier (2023-2024)</h2><p>Pour chaque jour avec feu, tu as estimé à la main les kWh que tu aurais consommés sans feu (« kWh eq estimé ») ; "
              "l'économie = coût(eq) − coût(réel), avec des paliers de 40 kWh appliqués jour par jour, sans taxes. Les jours sans feu, eq = réel.</p>"
              "<h2>Approche proposée</h2><ol>"
-             "<li>Météo publique : température moyenne quotidienne Open-Meteo (réanalyse ERA5), point le plus proche de Vaudreuil-Dorion (hypothèse de lieu). "
+             "<li>Météo publique : température quotidienne observée par Environnement Canada à Ste-Anne-de-Bellevue 1 (≈ 8 km de Vaudreuil-Dorion ; repli Montréal-Trudeau), moyenne = (max + min) / 2. Recalibré le 23 nov. 2026 (avant : Open-Meteo, modèle ECMWF IFS). "
              "Degrés-jours de chauffe base 18 °C : DJ = max(18 − T moy., 0).</li>"
              "<li>Régression sur les 102 jours mesurés : <b>kWh réels = a + b × DJ + c × bûches</b>. Le coefficient c (négatif) est l'électricité évitée par bûche, à température égale.</li>"
              "<li>Pourquoi pas « jours sans feu seulement » ? Les 28 jours sans feu sont presque tous doux (−7 à +9 °C) : on ne peut pas extrapoler aux jours de −14 °C. "
@@ -375,7 +376,12 @@ def main(quand):
              "Règles 3 et 4 assouplies (jours cœur ≤ −5 °C au lieu de −8 °C, 12 bûches au lieu de 10, surplus libéré au 1er janv. au lieu du 1er févr.). Une corde d'appoint reste non rentable.</li>"
              "<li>Une bûche vaut ≈ 0,47 $ hors événement (Flex D) contre ≈ 0,58 $ au tarif D 2026 ; seuil de rentabilité ≈ 1 115 bûches (Flex D hors événement) ou ≈ 911 (tarif D).</li>"
              "<li>Test ajouté : interaction bûches × degrés-jours non significative ; le gain par bûche reste constant dans le modèle.</li>"
-             "<li>Suite : <a href='protocole.html'>Protocole hiver 2026-2027</a> (étude météo, simulation, saisie).</li></ul>")
+             "<li>Suite : <a href='protocole.html'>Protocole hiver 2026-2027</a> (étude météo, simulation, saisie).</li></ul>"
+             "<h2 id='maj-2026-11-23'>Mise à jour du 23 novembre 2026 : météo observée d'Environnement Canada</h2><ul>"
+             "<li>La température de référence n'est plus Open-Meteo (un modèle) mais la mesure d'Environnement Canada à Ste-Anne-de-Bellevue 1 "
+             "(repli Montréal-Trudeau), moyenne = (max + min) / 2. Le modèle, les normales, les creux et la simulation ont été recalibrés une fois : "
+             "les chiffres de cette page sont ceux d'après. Comparaison avant / après : "
+             f"<a href='{DEPOT}/blob/main/docs/recalibration-meteo-ec-2026-11.md'>docs/recalibration-meteo-ec-2026-11.md</a>.</li></ul>")
     page("methode.html", "Méthode, modèle et incertitudes", corps, quand)
 
     # ---------------- propositions ----------------
@@ -393,6 +399,11 @@ def main(quand):
              "<li><b>Constat</b> : le stock n'est plus la contrainte ; le ciblage sert surtout à ne jamais rater un événement. Achat d'appoint : toujours non rentable.</li>"
              "<li><b>À vérifier</b> : 4,1 cordes, c'est presque l'achat de 2023-24 (4 cordes), alors qu'on croyait qu'il en restait ≈ 1,5.</li>"
              "<li>Format retenu : site statique régénéré par script ; saisie simplifiée dans <code>data/saisie_2026-2027.csv</code>, avec suivi du stock.</li></ul>"
+             "<h2 id='revision-2026-11-23'>23 novembre 2026 : météo observée d'Environnement Canada</h2><ul>"
+             "<li>Source canonique de la météo passée : Environnement Canada, station Ste-Anne-de-Bellevue 1 (repli Montréal-Trudeau, puis Open-Meteo étiqueté « estimation par modèle »). "
+             "Moyenne = (max + min) / 2 ; modèle, normales et simulation recalibrés une fois ; 30 derniers jours retéléchargés chaque matin. "
+             f"Décision : <a href='{DEPOT}/blob/main/docs/boussole/decisions/2026-11-23-meteo-observee-ec.md'>boussole</a> ; "
+             f"<a href='{DEPOT}/issues/9'>issue #9</a>.</li></ul>"
              "<h2>À décider ou à faire</h2><ol>"
              "<li><b>Confirmer l'inventaire</b> : nombre de rangées en profondeur (une seule présumée) ; idéalement, compter un carré de 2 × 2 pi à deux ou trois endroits pour vérifier la densité de 6,7 bûches/pi². "
              "Un vrai recomptage ultérieur va dans la colonne <code>stock_compte</code>.</li>"

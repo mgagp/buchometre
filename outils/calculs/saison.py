@@ -8,6 +8,7 @@ Journal ; exporté dans rapports/data/saison_courante.json et rapports/data/reco
 import csv, json, os, datetime as dt
 from chemins import DATA, SOURCES
 from calculs import protocole, prevision, saisons
+from calculs import meteo as meteo_obs
 from calculs import recommandation as RG
 
 J = dt.timedelta(days=1)
@@ -108,14 +109,14 @@ def etat(saison, aujourd_hui=None):
     kwh_attente = [d for d in jours_saisis if sai[d]["kwh"] is None]
 
     # ---- météo : réelle (archive) avant aujourd'hui, prévision ensuite ----
-    M = protocole.charger_meteo()
+    M = meteo_obs.observee()  # EC Ste-Anne-de-Bellevue 1, repli Trudeau, puis modèle (étiqueté)
     maj = statut_maj()
     PV = prevision.combiner(vrai_auj, maj)
 
     def temp(d):
         """→ (t, prévision ?, source)."""
         if d < vrai_auj and d in M:
-            return M[d]["t"], False, "observée"
+            return M[d]["t"], False, meteo_obs.etiquette(M[d])
         v = PV["jours"].get(d)
         if v:
             return v["t"], d >= vrai_auj, v["source"]
@@ -248,7 +249,12 @@ def etat(saison, aujourd_hui=None):
         s = sai.get(d); h = hist_reco.get(d)
         ev = next((x for x in evts if x["date"] == d), None)
         stt = "saisi" if s else ("manquant" if d in manquants else ("futur" if d >= auj else "avant"))
-        info = f"{d.isoformat()}" + (f" · {t:.1f} °C".replace(".", ",") if t is not None else "") + (f" (prévision {src})" if est_prev else "")
+        mo = M.get(d) if d < vrai_auj else None
+        if mo:
+            fr = lambda x: f"{x:.1f}".replace(".", ",")
+            info = f"{d.isoformat()} · min {fr(mo['tmin'])}, max {fr(mo['tmax'])}, moy. {fr(mo['t'])} °C ({src})"
+        else:
+            info = f"{d.isoformat()}" + (f" · {t:.1f} °C".replace(".", ",") if t is not None else "") + (f" (prévision {src})" if est_prev else "")
         if meteo.get(d, {}).get("coeur"):
             info += " · cœur d'un creux froid"
         elif meteo.get(d, {}).get("creux"):
@@ -298,6 +304,8 @@ def etat(saison, aujourd_hui=None):
         "saisie": [sai[d] for d in jours_saisis], "manquants": manquants, "kwh_attente": kwh_attente, "debut_suivi": debut_suivi,
         "reco": reco, "creux_prevus": creux_prevus, "historique": historique,
         "prevision": {k: v for k, v in PV.items() if k != "jours"}, "maj": maj, "meteo_derniere": max(M) if M else None,
+        "meteo_observee": [dict(M[d], date=d, etiquette=meteo_obs.etiquette(M[d])) for d in sorted(M) if vrai_auj - 30 * J <= d < vrai_auj],
+        "meteo_libelle": meteo_obs.LIBELLE,
         "calendrier": cal, "courbe": courbe,
         "regles": {k: H[k] for k in ("regle_seuil_coeur", "regle_max_coeur", "regle_liberation", "regle_buches_evt")},
     }
