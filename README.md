@@ -1,5 +1,7 @@
 # buchometre
 
+[![Publier le site](https://github.com/mgagp/buchometre/actions/workflows/pages.yml/badge.svg)](https://github.com/mgagp/buchometre/actions/workflows/pages.yml)
+
 Le bûchomètre : combien d'électricité chaque bûche fait économiser, et quand il vaut la peine de faire un feu.
 
 **Site : https://mgagp.github.io/buchometre/** (consultable sur téléphone)
