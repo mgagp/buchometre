@@ -1,8 +1,20 @@
 name: Publier le site
 
+# Construit et publie le Bûchomètre :
+#  - à chaque push sur main (saisie, code, thème) ;
+#  - chaque matin : cron « 30 11 * * * » = 11 h 30 UTC, soit 6 h 30 à Toronto en heure normale (UTC−5, nov. → mars)
+#    et 7 h 30 en heure avancée (UTC−4). GitHub ne gère pas les fuseaux : on vise l'hiver, la saison qui compte.
+#    Le déclenchement planifié peut avoir de 5 à 30 min de retard ; GitHub le suspend après 60 jours sans activité
+#    dans le dépôt (les saisies suffisent à l'éviter) ;
+#  - à la main (workflow_dispatch).
+# La reconstruction du matin ne fait aucun commit : elle télécharge météo, prévision et événements Hydro-Québec
+# (--maj) pour cette construction seulement. Si un téléchargement échoue, on garde les fichiers versionnés de sources/.
+
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "30 11 * * *"
   workflow_dispatch:
 
 permissions:
@@ -24,8 +36,17 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - name: Préparer les données et générer le site
-        run: python outils/preparer_donnees.py && python outils/generer_site.py
+      - name: Préparer les données (avec rafraîchissement, repli sur les données versionnées)
+        run: |
+          if ! python outils/preparer_donnees.py --maj; then
+            echo "::warning::Préparation avec --maj en échec : nouvel essai avec les données versionnées du dépôt."
+            git checkout -- sources data && rm -f sources/maj_statut.json
+            python outils/preparer_donnees.py
+          fi
+      - name: Générer le site
+        run: python outils/generer_site.py
+      - name: Vérifier les liens et l'absence de couleurs codées en dur
+        run: python outils/verifier_site.py
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
