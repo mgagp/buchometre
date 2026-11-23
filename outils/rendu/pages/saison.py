@@ -201,7 +201,7 @@ def tableau_historique(e, n=None):
     lignes = []
     for x in H:
         suivi = {True: "<span class='b-ok badge'>suivi</span>", False: "<span class='b-prov badge'>écart</span>", None: ""}[x["suivi"]]
-        fait = "à saisir" if x["fait"] is None else nb(x["fait"])
+        fait = nb(x["fait"]) if x["fait"] is not None else ("en cours" if x["date"] >= e["aujourd_hui"] else "à saisir")
         lignes.append(f"<tr><td>{dfr(x['date'], jour=True)}</td><td>{E(_reco_court(x['reco']))}</td><td class=n>{fait}</td>"
                       f"<td class=n>{nb(x['kwh']) if x['kwh'] is not None else ''}</td><td>{suivi}</td></tr>")
     return ("<table class='compact'><tr><th>Jour</th><th>Recommandé</th><th>Bûches faites</th><th>kWh</th><th></th></tr>" + "".join(lignes) + "</table>")
