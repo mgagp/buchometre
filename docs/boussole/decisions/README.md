@@ -20,7 +20,7 @@ explicite), **Proposée** (en attente de Marc), **Remplacée par …** (on garde
 | 2026-11-22 | [Tarif Flex D ; option de crédit hivernal écartée](2026-11-22-tarif-flex-d.md) | Acceptée |
 | 2026-11-23 | [Une boussole : intention, principes et décisions dans le dépôt](2026-11-23-boussole-du-projet.md) | Acceptée |
 | 2026-11-23 | [Adopter des principes de travail allégés](2026-11-23-principes-de-travail-alleges.md) | Acceptée |
-| 2026-11-23 | [Adopter des bonnes pratiques GitHub simples et proportionnées](2026-11-23-pratiques-github-proportionnees.md) | Hypothèse |
+| 2026-11-23 | [Adopter des bonnes pratiques GitHub simples et proportionnées](2026-11-23-pratiques-github-proportionnees.md) | Acceptée |
 | 2026-11-23 | [Historique des recommandations par commit quotidien](2026-11-23-historique-recommandations-commit-quotidien.md) | Acceptée |
 | 2026-11-23 | [Plan recalculé sur la météo réelle, projection jusqu'au 31 mars](2026-11-23-plan-sur-meteo-reelle.md) | Hypothèse |
 | 2026-11-23 | [Publier le projet sur GitHub Pages sous le nom buchometre](2026-11-23-publication-github-pages.md) | Acceptée |

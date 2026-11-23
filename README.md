@@ -25,3 +25,4 @@ plan simulé, étude météo, inventaire), les archives (hiver 2023-2024) et la 
       python outils/verifier_site.py       # liens et thème
 
 Détails (structure, format de saisie, règles, modèle) : [AGENTS.md](AGENTS.md).
+Licence : [MIT](LICENSE).

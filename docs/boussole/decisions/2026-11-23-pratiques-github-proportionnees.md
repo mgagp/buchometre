@@ -1,8 +1,8 @@
 # Adopter des bonnes pratiques GitHub simples et proportionnées
 
 - **Date :** 2026-11-23
-- **Statut :** Hypothèse
-- **Source :** Demande de Marc, 23 nov. 2026 ; issue #7.
+- **Statut :** Acceptée
+- **Source :** Demande de Marc, 23 nov. 2026 ; issue #7 ; licence MIT confirmée par Marc le 23 nov. 2026.
 
 ## Contexte
 Le dépôt public a déjà GitHub Pages avec déploiement automatique et un cron quotidien qui enregistre la recommandation du jour. Marc a demandé quelles autres pratiques, simples et adaptées à un petit site statique personnel en Python (bibliothèque standard seulement), valaient la peine d'être activées.
@@ -18,11 +18,11 @@ Le dépôt public a déjà GitHub Pages avec déploiement automatique et un cron
 - C : coût d'entretien sans gain réel pour un site personnel sans dépendances pip, et la protection de branche casserait le push direct et le commit du matin.
 
 ## Décision
-Option B, détaillée dans l'issue #7. En particulier : pas de protection de branche, pas de CodeQL, pas de licence ajoutée sans l'accord de Marc (MIT proposée, en attente), pas de modèle d'issue. Un badge de statut et Dependabot (écosystème `github-actions`, mensuel) sont ajoutés. Les réglages du dépôt (URL, sujets, wiki et projets désactivés, alertes de vulnérabilité, actions limitées aux actions officielles GitHub) sont appliqués. Le secret scanning et la protection au push étaient déjà actifs.
+Option B, détaillée dans l'issue #7. En particulier : pas de protection de branche, pas de CodeQL, licence MIT (confirmée par Marc le 23 nov. 2026), pas de modèle d'issue. Un badge de statut et Dependabot (écosystème `github-actions`, mensuel) sont ajoutés. Les réglages du dépôt (URL, sujets, wiki et projets désactivés, alertes de vulnérabilité, actions limitées aux actions officielles GitHub) sont appliqués. Le secret scanning et la protection au push étaient déjà actifs.
 
 Le commit quotidien de la recommandation, pendant la saison (1er novembre au 31 mars), compte comme une activité du dépôt et relance le délai de 60 jours au terme duquel GitHub peut désactiver le déclenchement planifié. Hors saison, aucun commit automatique n'est fait : un garde-fou n'est pas ajouté maintenant ; on pourra le revoir au printemps 2027 si besoin. Un tag ou une release par saison attend la fin de l'hiver.
 
 ## Conséquences
-- Fichiers : `.github/dependabot.yml`, permissions par job dans `.github/workflows/pages.yml`, badge dans le `README.md`.
+- Fichiers : `.github/dependabot.yml`, permissions par job dans `.github/workflows/pages.yml`, badge et mention de licence dans le `README.md`, `LICENSE` (MIT).
 - Les pull requests de Dependabot, limitées aux actions officielles, pourront être fusionnées quand c'est commode, sans changer la règle de saisie (commit direct sur `main`).
-- Licence, confirmation des notifications d'échec et tag de fin de saison restent à trancher ou à faire plus tard (issue #7 laissée ouverte).
+- Licence MIT ajoutée. La confirmation des notifications d'échec, un tag en fin de saison et un éventuel garde-fou hors saison restent pour plus tard (issue #7 laissée ouverte).
