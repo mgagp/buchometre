@@ -2,7 +2,8 @@
 
 - **Date :** 2026-11-23
 - **Statut :** Acceptée (options A1, B1 et C1 ajustée, choisies par Marc) ; heures et seuils en « Hypothèse » (points de départ)
-- **Source :** [issue #10](https://github.com/mgagp/buchometre/issues/10) : analyse chiffrée et échanges avec Marc du 23 nov. (15 h 13 à 15 h 18).
+- **Source :** [issue #10](https://github.com/mgagp/buchometre/issues/10) : analyse chiffrée et échanges avec Marc du 23 nov. (15 h 13 à 15 h 18) ;
+  amendement du 23 nov., 15 h 49 (feu du matin à 6 h).
 
 ## Contexte
 Le site affichait la température moyenne du jour. Pour Marc, ce qui compte, c'est le min, le max et surtout le moment du min :
@@ -43,5 +44,14 @@ jusqu'au soir », ou « 30 à 60 min avant » pour un événement.
   dans `jours[]` : `heure_min`, `heure_min_source`, `plan_feu`. Les champs existants restent ; `moment` décrit maintenant le plan.
 - La simulation, le plan de stock et la décision ne changent pas : ils sont vérifiés identiques.
 - À ajuster avec les retours de confort : 1 h 30, −1 °C, 4 h, 19 h, −10 °C, et le partage moitié-moitié.
-- Le feu de 4 h 30 se décide la veille : la recommandation de 5 h 45 arrive après. Le plan de demain est donc publié dès aujourd'hui.
+- Le feu du matin se décide la veille : la recommandation de 5 h 45 arrive juste avant, mais la routine de 7 h arrive après. Le plan de demain est donc publié dès aujourd'hui.
 - Limite : l'effet du moment sur les kWh n'est pas mesuré ; il faudrait les kWh horaires.
+
+## Amendement du 2026-11-23 (15 h 49) : feu du matin à 6 h
+Marc : « je veux bien mettre mon cadran à 5 h 30 et commencer un feu à 6 h le matin, mais 4 h 30, ça n'arrivera pas ».
+- Nouveau paramètre `PLAN["allumage_tot"]` = 6 h : aucun feu ne s'allume plus tôt, même si la règle des 1 h 30 le demanderait.
+- Jours de feu (règles 3 et 4) : le feu du matin s'allume à 6 h. Dernière charge, puis baisse, vers 10 h ; c'est aussi le
+  plafond d'environ 4 h des jours doux. Le feu de l'après-midi reste vers 14 h 30.
+- Événement de 6 h à 10 h : on allume aussi à 6 h, et la pleine chaleur arrive vers 7 h 30. Événement de 16 h : toujours vers 14 h 30.
+- Conséquence : environ la première heure et demie de l'événement du matin est moins couverte par le bois. Le nombre de
+  bûches et la part de chaleur livrée dans la fenêtre (hypothèse de la simulation) ne changent pas ; ce n'est pas mesuré.

@@ -5,6 +5,7 @@ Lit l'état calculé par calculs/saison.py ; n'effectue aucun calcul métier.
 import html
 from rendu import graphes as svg
 from rendu.gabarit import page
+from calculs.recommandation import PLAN  # heure d'allumage au plus tôt (issue #10), affichée telle quelle
 from rendu.composants import (bloc, jauge, barre_temps, mini_barre, calendrier_saison, legende_calendrier,
                               nb, argent, dfr, JOURS_FR)
 
@@ -102,7 +103,7 @@ def bloc_plan(v):
     elif any(f["allumer"] >= "12:00" for f in pl["feux"]):
         notes.append("réduire vers 19 h, sauf nuit ≤ −10 °C (étage, sommeil)")
     return ("<table class='compact'><tr><th>Feu</th><th>Allumer</th><th>Dernière charge, puis laisser baisser</th><th>Bûches</th><th>Pour</th></tr>"
-            + lignes + "</table>" + f"<p class='petit'>Plan de feu : allumer ≈ 1 h 30 avant le moment visé{E(''.join(' ; ' + x for x in notes))}. "
+            + lignes + "</table>" + f"<p class='petit'>Plan de feu : allumer ≈ 1 h 30 avant le moment visé, pas avant {_hfr(PLAN['allumage_tot'])}{E(''.join(' ; ' + x for x in notes))}. "
             "Heures de départ à ajuster selon le confort ; le nombre de bûches vient de la règle.</p>")
 
 

@@ -119,7 +119,8 @@ Archives avec son tableau de bord figé. À revoir à ce moment : inventaire de 
   jusqu'à 12 bûches ; surplus libéré dès le 1er janvier ; 50 bûches sous le plan → événements seulement.
   Une seule implémentation : `outils/calculs/recommandation.py`. Le plan = la règle appliquée à la météo réelle
   depuis l'inventaire ; la projection = la règle sur la prévision, puis la dépense moyenne des 3 hivers simulés.
-- Moment du feu (issue #10) : allumer ≈ 1 h 30 avant le moment visé (4 h 30 pour 6 h, 14 h 30 pour 16 h, événements compris) ;
+- Moment du feu (issue #10) : allumer ≈ 1 h 30 avant le moment visé, mais pas avant 6 h (`PLAN["allumage_tot"]`) :
+  feu du matin et événement de 6 h allumés à 6 h (pleine chaleur vers 7 h 30), 14 h 30 pour 16 h ;
   jours de feu en deux feux (≈ moitié-moitié) ; max prévu ≥ −1 °C → ≈ 4 h par feu ; réduire vers 19 h sauf nuit ≤ −10 °C
   (dernière charge vers 21 h 30). La décision et le nombre de bûches restent calculés sur la moyenne (max + min) / 2.
 - Limite connue : la prime d'événement réelle n'est pas mesurée (il faudrait les kWh horaires).
