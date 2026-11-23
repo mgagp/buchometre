@@ -19,7 +19,7 @@ température, sans creux) et un calcul à part dans la routine du matin. Deux ca
 ## Décision
 Option B. `outils/calculs/recommandation.py` contient la règle de budget (`decider`, utilisée aussi par la simulation de
 `protocole.py`), la détection des creux froids (`creux`, la même pour l'historique et la prévision) et le verdict du jour.
-Ordre : (1) événement Flex D annoncé, allumer 30 à 60 min avant ; (5) plus de 50 bûches sous le plan, événements seulement ;
+Ordre : (1) événement Flex D annoncé, allumer 30 à 60 min avant (1 h 30 depuis `2026-11-23-min-max-moment-du-feu`) ; (5) plus de 50 bûches sous le plan, événements seulement ;
 (3) jour cœur d'un creux, T moy ≤ −5 °C, période critique, jusqu'à 12 bûches si le stock reste au-dessus de la réserve ;
 (4) dès le 1er janvier, T moy ≤ 0 °C, même condition ; sinon pas de feu. Prévision : Environnement Canada pour
 Vaudreuil-Dorion, Open-Meteo en secours ; la source est affichée. Résultat publié dans `data/recommandation.json`.

@@ -26,6 +26,7 @@ explicite), **Proposée** (en attente de Marc), **Remplacée par …** (on garde
 | 2026-11-23 | [Publier le projet sur GitHub Pages sous le nom buchometre](2026-11-23-publication-github-pages.md) | Acceptée |
 | 2026-11-23 | [Relooking après la restructuration, limité au thème](2026-11-23-relooking-apres-restructuration.md) | Acceptée |
 | 2026-11-23 | [Identité visuelle : camp de bûcherons cartoon](2026-11-23-identite-camp-bucherons.md) | Acceptée |
+| 2026-11-23 | [Température du jour en min / max, heure du min et plan de feu](2026-11-23-min-max-moment-du-feu.md) | Acceptée |
 | 2026-11-23 | [Météo observée canonique : Environnement Canada, Ste-Anne-de-Bellevue 1](2026-11-23-meteo-observee-ec.md) | Acceptée |
 | 2026-11-23 | [Recommandation canonique dans le dépôt](2026-11-23-recommandation-canonique.md) | Acceptée |
 | 2026-11-23 | [Restructurer le site en mode saison](2026-11-23-restructuration-mode-saison.md) | Acceptée |

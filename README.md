@@ -7,7 +7,7 @@ Le bûchomètre : combien d'électricité chaque bûche fait économiser, et qua
 **Site : https://mgagp.github.io/buchometre/** (consultable sur téléphone)
 
 Mesures de chauffage au bois d'une maison de Vaudreuil-Dorion (Québec) : bûches par jour, consommation
-Hydro-Québec, température. À l'accueil, le tableau de bord de la saison en cours (recommandation du jour, stock,
+Hydro-Québec, température. À l'accueil, le tableau de bord de la saison en cours (recommandation du jour avec min / max, heure du min et plan de feu, stock,
 réel contre plan, événements de pointe Flex D, calendrier) ; puis le journal des saisies, la stratégie (règles,
 plan simulé, étude météo, inventaire), les archives (hiver 2023-2024) et la méthode.
 

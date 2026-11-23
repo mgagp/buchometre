@@ -33,7 +33,9 @@ puis jours les plus froids), avec un stock de bois limité.
 - **Méthode** (`methode.html`) : modèle, incertitudes, historique des décisions, fonctionnement du site.
 - Les anciennes adresses (`protocole*.html`, `jours.html`, `mois-*.html`, `decisions.html`…) redirigent vers les nouvelles
   (`ROUTES` dans `outils/rendu/gabarit.py`). Publiés aussi : `data/recommandation.json` (la recommandation du jour,
-  lue par la routine du matin) et `data/saison_courante.json` (tout l'état du tableau de bord).
+  lue par la routine du matin ; champs du jour : `recommandation`, `buches`, `moment`, `raison`, `t_min`, `t_max`, `heure_min`,
+  `heure_min_source`, `plan_feu` ; `jours[]` pour hier, aujourd'hui, demain et après-demain) et `data/saison_courante.json`
+  (tout l'état du tableau de bord).
 
 ## Structure : trois couches séparées
 - `sources/` : copies en lecture seule (chiffrier exporté, météo observée EC 2023-2026 `meteo_ec_2023-2026.csv`,
@@ -42,12 +44,13 @@ puis jours les plus froids), avec un stock de bois limité.
 - `data/` : **saisie manuelle** `data/saisie_2026-2027.csv`, inventaire `data/inventaire_pile_2026-11.csv`,
   **`data/saisons.json`** (saisons, dates, saison courante), **`data/recommandations_2026-2027.csv`** (historique :
   une ligne par matin, écrite et commitée par le workflow, ne pas modifier à la main), **`data/meteo_observee_2026-2027.csv`**
-  (météo observée de la saison : `date,station,min,max,moyenne,source`, 30 derniers jours retéléchargés chaque matin
+  (météo observée de la saison : `date,station,min,max,moyenne,source,heure_min`, 30 derniers jours retéléchargés chaque matin
   et commités par le workflow ; ne pas modifier à la main) et les CSV/JSON dérivés.
 - `outils/calculs/` (données → chiffres, **aucun HTML**) : `preparer_donnees.py` (2023-24, modèle, téléchargements),
   `protocole.py` (météo, creux, simulation), `inventaire.py`, `saison.py` (état de la saison à une date),
-  `recommandation.py` (**source canonique** : règle de budget, creux froids, verdict du jour ; la simulation l'utilise aussi),
-  `prevision.py` (Environnement Canada, Open-Meteo en secours), `meteo.py` (**météo observée canonique** : EC
+  `recommandation.py` (**source canonique** : règle de budget, creux froids, verdict du jour ; la simulation l'utilise aussi ;
+  `PLAN` et `plan_feu()` : heures d'allumage et de baisse, sans effet sur la décision),
+  `prevision.py` (Environnement Canada, Open-Meteo en secours ; heure du min : horaire EC sur 24 h, sinon Open-Meteo « (modèle) »), `meteo.py` (**météo observée canonique** : EC
   Ste-Anne-de-Bellevue 1, repli Montréal-Trudeau, puis Open-Meteo étiqueté « estimation par modèle » ; moyenne = (max + min) / 2),
   `valider_saisie.py`, `saisons.py`.
 - `outils/rendu/` (chiffres → HTML, **aucune couleur**) : `gabarit.py` (en-tête, menu, liens, redirections),
@@ -116,4 +119,7 @@ Archives avec son tableau de bord figé. À revoir à ce moment : inventaire de 
   jusqu'à 12 bûches ; surplus libéré dès le 1er janvier ; 50 bûches sous le plan → événements seulement.
   Une seule implémentation : `outils/calculs/recommandation.py`. Le plan = la règle appliquée à la météo réelle
   depuis l'inventaire ; la projection = la règle sur la prévision, puis la dépense moyenne des 3 hivers simulés.
+- Moment du feu (issue #10) : allumer ≈ 1 h 30 avant le moment visé (4 h 30 pour 6 h, 14 h 30 pour 16 h, événements compris) ;
+  jours de feu en deux feux (≈ moitié-moitié) ; max prévu ≥ −1 °C → ≈ 4 h par feu ; réduire vers 19 h sauf nuit ≤ −10 °C
+  (dernière charge vers 21 h 30). La décision et le nombre de bûches restent calculés sur la moyenne (max + min) / 2.
 - Limite connue : la prime d'événement réelle n'est pas mesurée (il faudrait les kWh horaires).

@@ -69,5 +69,6 @@ a payé en fin de saison.
 | Restructuration en mode saison : accueil tableau de bord, 5 menus, archives, régénération chaque matin | 23 nov. 2026 | Faite (issue #4) |
 | Le temps qui avance : recommandation canonique (Environnement Canada, creux froids), historique par commit quotidien, plan sur la météo réelle | 23 nov. 2026 | Faite (issue #6) |
 | Météo observée canonique (Environnement Canada, Ste-Anne-de-Bellevue 1) et recalibration | 23 nov. 2026 | Faite (issue #9) |
+| Température du jour en min / max, heure du min et plan de feu (moment) | 23 nov. 2026 | Faite (issue #10) |
 | Identité visuelle québécoise (jalon 2), limitée au thème : camp de bûcherons cartoon | 23 nov. 2026 | Faite (issue #2) |
 | Généralisation légère : une saison de plus sans toucher au code (jalon 3) | avant l'hiver 2027-28 | À faire |
