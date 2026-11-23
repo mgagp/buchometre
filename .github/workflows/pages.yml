@@ -5,13 +5,14 @@ name: Publier le site
 #  - chaque matin : cron « 45 10 * * * » = 10 h 45 UTC, soit 5 h 45 à Toronto en heure normale (UTC−5, nov. → mi-mars)
 #    et 6 h 45 en heure avancée (UTC−4, dès le 14 mars 2027). GitHub ne gère pas les fuseaux. Le déclenchement planifié
 #    peut avoir du retard (souvent 5 à 30 min, parfois plus). Dans un dépôt public, GitHub désactive ce déclenchement
-#    après 60 jours sans activité du dépôt ; le commit quotidien de la recommandation, pendant la saison
+#    après 60 jours sans activité du dépôt ; le commit quotidien (recommandation et météo observée), pendant la saison
 #    (1er nov. au 31 mars), relance ce délai. Hors saison, aucun commit automatique n'est fait ;
 #  - à la main (workflow_dispatch), qui se comporte comme le cron.
-# Chaque construction télécharge météo, prévisions (Environnement Canada, Open-Meteo) et événements Hydro-Québec (--maj)
-# pour elle seule ; si un téléchargement échoue, on garde les fichiers versionnés de sources/ (mode ouvert, affiché).
-# Le cron et le lancement manuel enregistrent en plus la recommandation du jour dans data/recommandations_AAAA-AAAA.csv
-# et la commitent (un commit par jour au plus, aucun si la ligne du jour existe déjà), identité github-actions[bot],
+# Chaque construction télécharge la météo observée (Environnement Canada, 30 derniers jours, révisions acceptées), les
+# prévisions (EC, Open-Meteo en secours) et les événements Hydro-Québec (--maj) ; si un téléchargement échoue, on garde
+# les fichiers versionnés (mode ouvert, affiché). Le cron et le lancement manuel commitent en plus, en un seul commit,
+# la recommandation du jour (data/recommandations_AAAA-AAAA.csv, la première du jour fait foi) et la météo observée
+# (data/meteo_observee_AAAA-AAAA.csv) ; aucun commit si rien n'a changé. Identité github-actions[bot],
 # avec GITHUB_TOKEN. Un push fait avec GITHUB_TOKEN ne relance aucun workflow : pas de boucle ; le déploiement se fait
 # dans cette même exécution.
 
@@ -59,21 +60,22 @@ jobs:
         run: python outils/generer_site.py
       - name: Vérifier les liens et l'absence de couleurs codées en dur
         run: python outils/verifier_site.py
-      - name: Commit quotidien de la recommandation (data/recommandations_*.csv seulement)
+      - name: Commit quotidien (recommandation et météo observée seulement)
         if: github.event_name != 'push'
         run: |
-          if [ -z "$(git status --porcelain -- 'data/recommandations_*.csv')" ]; then
-            echo "Recommandation du jour déjà versionnée : aucun commit."; exit 0
+          F="data/recommandations_*.csv data/meteo_observee_*.csv"
+          if [ -z "$(git status --porcelain -- $F)" ]; then
+            echo "Recommandation et météo observée déjà versionnées : aucun commit."; exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898099+github-actions[bot]@users.noreply.github.com"
-          git add -- 'data/recommandations_*.csv'
-          git commit -q -m "Recommandation du $(date +%F) (automatique)"
+          git add -- $F
+          git commit -q -m "Recommandation et météo observée du $(date +%F) (automatique)"
           for essai in 1 2 3; do
             git push -q origin HEAD:main && exit 0
             git pull -q --rebase --autostash origin main
           done
-          echo "::warning::Commit de la recommandation non poussé ; le site est quand même publié."
+          echo "::warning::Commit quotidien non poussé ; le site est quand même publié."
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
