@@ -26,6 +26,7 @@ Vaudreuil-Dorion, Open-Meteo en secours ; la source est affichée. Résultat pub
 
 Hypothèses (choix techniques, à confirmer à l'usage) :
 - T moyenne d'un jour selon Environnement Canada = (maximum + moyenne des minimums des nuits avant et après) / 2.
+  *Remplacée le même jour* : (max + min de la nuit précédente, sinon suivante) / 2, voir `2026-11-23-meteo-observee-ec`.
 - Jour cœur = même définition que l'analyse historique (médiane des 31 jours autour, ici réel puis prévision) ;
   en bout de prévision, la fenêtre est tronquée.
 - Sans prévision du jour : verdict « indéterminé » (mode ouvert), affiché ; un événement annoncé reste recommandé.

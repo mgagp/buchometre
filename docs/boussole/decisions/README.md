@@ -9,7 +9,7 @@ explicite), **Proposée** (en attente de Marc), **Remplacée par …** (on garde
 | 2026-11-21 | [Estimer les kWh évités par une régression (≈ 4,5 kWh par bûche)](2026-11-21-modele-kwh-par-regression.md) | Acceptée |
 | 2026-11-22 | [Ne pas chauffer tous les jours : cibler les moments rentables](2026-11-22-cibler-moments-rentables.md) | Acceptée |
 | 2026-11-22 | [Inventaire mesuré de la pile : 876 bûches](2026-11-22-inventaire-876-buches.md) | Acceptée |
-| 2026-11-22 | [Météo de référence : Vaudreuil-Dorion](2026-11-22-meteo-vaudreuil-dorion.md) | Acceptée |
+| 2026-11-22 | [Météo de référence : Vaudreuil-Dorion](2026-11-22-meteo-vaudreuil-dorion.md) | Remplacée par `2026-11-23-meteo-observee-ec` (archives) ; prévisions inchangées |
 | 2026-11-22 | [Pas de corde d'appoint cet hiver](2026-11-22-pas-de-corde-appoint.md) | Acceptée |
 | 2026-11-22 | [Prix du bois de référence : 425 $ tout compris, +25 $ par corde](2026-11-22-prix-du-bois-reference.md) | Acceptée |
 | 2026-11-22 | [Règle de budget avec réserve pour les événements](2026-11-22-regle-de-budget-avec-reserve.md) | Acceptée |
@@ -26,6 +26,7 @@ explicite), **Proposée** (en attente de Marc), **Remplacée par …** (on garde
 | 2026-11-23 | [Publier le projet sur GitHub Pages sous le nom buchometre](2026-11-23-publication-github-pages.md) | Acceptée |
 | 2026-11-23 | [Relooking après la restructuration, limité au thème](2026-11-23-relooking-apres-restructuration.md) | Acceptée |
 | 2026-11-23 | [Identité visuelle : camp de bûcherons cartoon](2026-11-23-identite-camp-bucherons.md) | Acceptée |
+| 2026-11-23 | [Météo observée canonique : Environnement Canada, Ste-Anne-de-Bellevue 1](2026-11-23-meteo-observee-ec.md) | Acceptée |
 | 2026-11-23 | [Recommandation canonique dans le dépôt](2026-11-23-recommandation-canonique.md) | Acceptée |
 | 2026-11-23 | [Restructurer le site en mode saison](2026-11-23-restructuration-mode-saison.md) | Acceptée |
 | 2026-11-23 | [Un commit par saisie, sans pull request](2026-11-23-un-commit-par-saisie.md) | Acceptée |

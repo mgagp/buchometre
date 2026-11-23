@@ -1,7 +1,7 @@
 # Météo de référence : Vaudreuil-Dorion
 
 - **Date :** 2026-11-22
-- **Statut :** Acceptée
+- **Statut :** Remplacée par `2026-11-23-meteo-observee-ec` pour les archives (météo observée d'Environnement Canada) ; prévisions inchangées
 - **Source :** Confirmé par Marc le 22 nov. 2026 ; page Décisions.
 
 ## Contexte

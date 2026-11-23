@@ -39,7 +39,7 @@ saisie, commandes) sont dans `AGENTS.md`. Ce fichier ne les répète pas.
 9. **Des choix assumés.** On recommande une option et on dit pourquoi, au lieu d'aligner des possibilités.
    *Exemple :* « pas de corde d'appoint cette année », chiffré, plutôt qu'un « ça dépend ».
 10. **Des affirmations honnêtes.** On dit ce que le site mesure, ce qu'il estime et ce qu'il ne sait pas ; pas de
-    survente. *Exemple :* le gain d'une bûche est présenté comme 4,5 kWh, plage de 3,6 à 5,7, et le stock comme
+    survente. *Exemple :* le gain d'une bûche est présenté comme 4,9 kWh, plage de 3,9 à 6,2, et le stock comme
     876 bûches, fourchette de 876 à 947.
 11. **L'information là où l'on regarde déjà.** On juge l'expérience d'ensemble, surtout sur téléphone.
     *Exemple :* la recommandation du jour et le stock sont en haut de l'accueil, au lieu d'être cachés dans une

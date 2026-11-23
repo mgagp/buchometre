@@ -36,16 +36,20 @@ puis jours les plus froids), avec un stock de bois limité.
   lue par la routine du matin) et `data/saison_courante.json` (tout l'état du tableau de bord).
 
 ## Structure : trois couches séparées
-- `sources/` : copies en lecture seule (chiffrier exporté, météo et prévision Open-Meteo, prévision d'Environnement
-  Canada pour Vaudreuil-Dorion, événements de pointe HQ,
+- `sources/` : copies en lecture seule (chiffrier exporté, météo observée EC 2023-2026 `meteo_ec_2023-2026.csv`,
+  météo et prévision Open-Meteo, prévision d'Environnement Canada pour Vaudreuil-Dorion, événements de pointe HQ,
   grille tarifaire). Ne pas modifier à la main ; `--maj` les rafraîchit. `sources/maj_statut.json` n'est pas versionné.
 - `data/` : **saisie manuelle** `data/saisie_2026-2027.csv`, inventaire `data/inventaire_pile_2026-11.csv`,
   **`data/saisons.json`** (saisons, dates, saison courante), **`data/recommandations_2026-2027.csv`** (historique :
-  une ligne par matin, écrite et commitée par le workflow, ne pas modifier à la main) et les CSV/JSON dérivés.
+  une ligne par matin, écrite et commitée par le workflow, ne pas modifier à la main), **`data/meteo_observee_2026-2027.csv`**
+  (météo observée de la saison : `date,station,min,max,moyenne,source`, 30 derniers jours retéléchargés chaque matin
+  et commités par le workflow ; ne pas modifier à la main) et les CSV/JSON dérivés.
 - `outils/calculs/` (données → chiffres, **aucun HTML**) : `preparer_donnees.py` (2023-24, modèle, téléchargements),
   `protocole.py` (météo, creux, simulation), `inventaire.py`, `saison.py` (état de la saison à une date),
   `recommandation.py` (**source canonique** : règle de budget, creux froids, verdict du jour ; la simulation l'utilise aussi),
-  `prevision.py` (Environnement Canada, Open-Meteo en secours), `valider_saisie.py`, `saisons.py`.
+  `prevision.py` (Environnement Canada, Open-Meteo en secours), `meteo.py` (**météo observée canonique** : EC
+  Ste-Anne-de-Bellevue 1, repli Montréal-Trudeau, puis Open-Meteo étiqueté « estimation par modèle » ; moyenne = (max + min) / 2),
+  `valider_saisie.py`, `saisons.py`.
 - `outils/rendu/` (chiffres → HTML, **aucune couleur**) : `gabarit.py` (en-tête, menu, liens, redirections),
   `composants.py` (bloc, jauge, barre de temps, calendrier…), `graphes.py` (SVG, couleurs par variables du thème),
   `pages/` (un module par section : `saison`, `journal`, `strategie`, `methode`, `archives_2023`).
@@ -56,9 +60,9 @@ puis jours les plus froids), avec un stock de bois limité.
 - `rapports/` : site généré, **non versionné** (sauf `rapports/img/`). GitHub Actions le reconstruit et le publie à chaque
   push sur `main`, chaque matin à 10 h 45 UTC (5 h 45 à Toronto en hiver, 6 h 45 en été) et à la main
   (`.github/workflows/pages.yml`). En CI, `--maj` rafraîchit météo, prévisions et événements pour la construction
-  (sans les commiter) ; si un téléchargement échoue, les fichiers versionnés sont utilisés et l'accueil le dit.
-  Le cron et le lancement manuel commitent en plus la recommandation du jour (`github-actions[bot]`, `GITHUB_TOKEN`,
-  au plus un commit par jour, aucun si la ligne existe) : faire `git pull` avant de pousser une saisie.
+  (sans les commiter, sauf la météo observée) ; si un téléchargement échoue, les fichiers versionnés sont utilisés et l'accueil le dit.
+  Le cron et le lancement manuel commitent en plus la recommandation du jour et la météo observée (`github-actions[bot]`,
+  `GITHUB_TOKEN`, un seul commit, aucun si rien n'a changé) : faire `git pull` avant de pousser une saisie.
 - Essai à une autre date : `BUCHOMETRE_DATE=2026-12-15 python outils/generer_site.py` (dans une copie, avec de fausses données).
 
 ## Ajouter une saisie
@@ -101,8 +105,8 @@ Archives avec son tableau de bord figé. À revoir à ce moment : inventaire de 
 8. Avant de pousser : `outils/verifier_site.py` doit passer (il tourne aussi en CI).
 
 ## Modèle en bref
-- Régression sur 102 jours mesurés (2023-24) : kWh ≈ 50 + 1,94 × degrés-jours (base 18 °C) − 4,50 × bûches,
-  soit ≈ 4,5 kWh évités par bûche (3,6 à 5,7).
+- Régression sur 102 jours mesurés (2023-24), météo observée d'EC : kWh ≈ 46 + 2,29 × degrés-jours (base 18 °C)
+  − 4,87 × bûches, soit ≈ 4,9 kWh évités par bûche (3,9 à 6,2). Avant/après : `docs/recalibration-meteo-ec-2026-11.md`.
 - Tarif **Flex D** (1er avril 2026), hiver du 1er déc. au 31 mars : 4,886 ¢/kWh jusqu'à 40 kWh × jours, puis
   9,103 ¢ ; **46,463 ¢/kWh pendant un événement de pointe** (6 h-10 h ou 16 h-20 h, avis la veille avant 15 h).
   Hors hiver : tarif D (7,065 / 11,142 ¢).

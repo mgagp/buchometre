@@ -16,8 +16,9 @@ plan simulé, étude météo, inventaire), les archives (hiver 2023-2024) et la 
 - Trois couches : `outils/calculs/` (chiffres), `outils/rendu/` (HTML), `theme/` (apparence).
 - GitHub Actions reconstruit et publie `rapports/` sur GitHub Pages à chaque push sur `main` et chaque matin
   (10 h 45 UTC, soit 5 h 45 à Toronto en hiver) avec la prévision d'Environnement Canada (Open-Meteo en secours)
-  et les événements du jour. La recommandation du matin est conservée dans `data/recommandations_2026-2027.csv`
-  (un commit automatique par jour) et publiée dans [`data/recommandation.json`](https://mgagp.github.io/buchometre/data/recommandation.json).
+  et les événements du jour. La recommandation du matin est conservée dans `data/recommandations_2026-2027.csv`,
+  la météo observée (Environnement Canada, station Ste-Anne-de-Bellevue 1) dans `data/meteo_observee_2026-2027.csv`
+  (un seul commit automatique par jour) et publiée dans [`data/recommandation.json`](https://mgagp.github.io/buchometre/data/recommandation.json).
 - Python 3, bibliothèque standard seulement. Pour générer localement :
 
       python outils/preparer_donnees.py    # --maj pour rafraîchir météo, prévision et événements
