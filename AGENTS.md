@@ -25,33 +25,41 @@ puis jours les plus froids), avec un stock de bois limité.
 
 ## Le site (5 entrées)
 - **Saison** (`index.html`) : tableau de bord de la saison courante (recommandation du jour, stock contre réserve,
-  avancement, réel contre plan, événements Flex D, calendrier, courbe de stock, derniers jours saisis).
-- **Journal** (`journal.html`) : toutes les journées saisies, jours à saisir, suivi réel contre plan, mode d'emploi.
+  avancement, réel contre plan, événements Flex D, calendrier, courbe de stock, recommandé et fait).
+- **Journal** (`journal.html`) : historique « recommandé, puis fait », journées saisies, jours à saisir, réel contre plan, mode d'emploi.
 - **Stratégie** (`strategie/`) : règles et tarif (`index`), plan de saison simulé (`plan`, ancres `#mensuel`, `#jours`),
   étude météo (`meteo`), inventaire de la pile (`inventaire`).
 - **Archives** (`archives/`) : saisons passées ; l'hiver 2023-24 (chiffrier) dans `archives/2023-2024/`.
 - **Méthode** (`methode.html`) : modèle, incertitudes, historique des décisions, fonctionnement du site.
 - Les anciennes adresses (`protocole*.html`, `jours.html`, `mois-*.html`, `decisions.html`…) redirigent vers les nouvelles
-  (`ROUTES` dans `outils/rendu/gabarit.py`). `data/saison_courante.json` publie l'état du tableau de bord (utile à la routine).
+  (`ROUTES` dans `outils/rendu/gabarit.py`). Publiés aussi : `data/recommandation.json` (la recommandation du jour,
+  lue par la routine du matin) et `data/saison_courante.json` (tout l'état du tableau de bord).
 
 ## Structure : trois couches séparées
-- `sources/` : copies en lecture seule (chiffrier exporté, météo et prévision Open-Meteo, événements de pointe HQ,
+- `sources/` : copies en lecture seule (chiffrier exporté, météo et prévision Open-Meteo, prévision d'Environnement
+  Canada pour Vaudreuil-Dorion, événements de pointe HQ,
   grille tarifaire). Ne pas modifier à la main ; `--maj` les rafraîchit. `sources/maj_statut.json` n'est pas versionné.
 - `data/` : **saisie manuelle** `data/saisie_2026-2027.csv`, inventaire `data/inventaire_pile_2026-11.csv`,
-  **`data/saisons.json`** (saisons, dates, saison courante) et les CSV/JSON dérivés.
+  **`data/saisons.json`** (saisons, dates, saison courante), **`data/recommandations_2026-2027.csv`** (historique :
+  une ligne par matin, écrite et commitée par le workflow, ne pas modifier à la main) et les CSV/JSON dérivés.
 - `outils/calculs/` (données → chiffres, **aucun HTML**) : `preparer_donnees.py` (2023-24, modèle, téléchargements),
   `protocole.py` (météo, creux, simulation), `inventaire.py`, `saison.py` (état de la saison à une date),
-  `recommandation.py` (feu ou pas, combien), `valider_saisie.py`, `saisons.py`.
+  `recommandation.py` (**source canonique** : règle de budget, creux froids, verdict du jour ; la simulation l'utilise aussi),
+  `prevision.py` (Environnement Canada, Open-Meteo en secours), `valider_saisie.py`, `saisons.py`.
 - `outils/rendu/` (chiffres → HTML, **aucune couleur**) : `gabarit.py` (en-tête, menu, liens, redirections),
   `composants.py` (bloc, jauge, barre de temps, calendrier…), `graphes.py` (SVG, couleurs par variables du thème),
   `pages/` (un module par section : `saison`, `journal`, `strategie`, `methode`, `archives_2023`).
 - `theme/` (**apparence seulement**) : `site.css` (variables de couleur, typographie), images ; copié dans `rapports/assets/`.
   Le relooking ne touche que ce dossier. Classes stables : `theme/README.md`.
-- Points d'entrée : `outils/preparer_donnees.py`, `outils/generer_site.py`, `outils/verifier_site.py`.
+- Points d'entrée : `outils/preparer_donnees.py`, `outils/generer_site.py`, `outils/verifier_site.py`,
+  `outils/enregistrer_recommandation.py` (ligne du jour dans l'historique ; appelé par le workflow du matin).
 - `rapports/` : site généré, **non versionné** (sauf `rapports/img/`). GitHub Actions le reconstruit et le publie à chaque
   push sur `main`, chaque matin à 11 h 30 UTC (6 h 30 à Toronto en hiver, 7 h 30 en été) et à la main
-  (`.github/workflows/pages.yml`). En CI, `--maj` rafraîchit météo, prévision et événements pour la construction
-  (sans commit) ; si un téléchargement échoue, les fichiers versionnés sont utilisés.
+  (`.github/workflows/pages.yml`). En CI, `--maj` rafraîchit météo, prévisions et événements pour la construction
+  (sans les commiter) ; si un téléchargement échoue, les fichiers versionnés sont utilisés et l'accueil le dit.
+  Le cron et le lancement manuel commitent en plus la recommandation du jour (`github-actions[bot]`, `GITHUB_TOKEN`,
+  au plus un commit par jour, aucun si la ligne existe) : faire `git pull` avant de pousser une saisie.
+- Essai à une autre date : `BUCHOMETRE_DATE=2026-12-15 python outils/generer_site.py` (dans une copie, avec de fausses données).
 
 ## Ajouter une saisie
 Une ligne par jour dans `data/saisie_2026-2027.csv`, même sans feu, UTF-8, virgules :
@@ -71,7 +79,8 @@ Une ligne par jour dans `data/saisie_2026-2027.csv`, même sans feu, UTF-8, virg
     python outils/preparer_donnees.py --maj   # --maj : météo, prévision, événements HQ (facultatif)
     python outils/generer_site.py             # génère rapports/
     python outils/verifier_site.py            # liens internes, ancres, aucune couleur codée en dur
-    git add data sources && git commit -m "Saisie du 2026-12-08 au 2026-12-10"
+    git pull --rebase                         # récupérer le commit automatique du matin
+    git add data/saisie_2026-2027.csv && git commit -m "Saisie du 2026-12-08 au 2026-12-10"
     git push                                  # Actions reconstruit et publie (≈ 1 min)
 
 ## Changer de saison (ex. 2027-2028)
@@ -101,3 +110,6 @@ Archives avec son tableau de bord figé. À revoir à ce moment : inventaire de 
   une seule rangée : confirmé par Marc).
 - Règles de chauffe : événements toujours (4-5 bûches) ; réserve de 5 bûches par événement attendu ; jours ≤ −5 °C
   jusqu'à 12 bûches ; surplus libéré dès le 1er janvier ; 50 bûches sous le plan → événements seulement.
+  Une seule implémentation : `outils/calculs/recommandation.py`. Le plan = la règle appliquée à la météo réelle
+  depuis l'inventaire ; la projection = la règle sur la prévision, puis la dépense moyenne des 3 hivers simulés.
+- Limite connue : la prime d'événement réelle n'est pas mesurée (il faudrait les kWh horaires).
