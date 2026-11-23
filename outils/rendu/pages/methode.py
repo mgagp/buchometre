@@ -24,7 +24,7 @@ def rendre(sortie, quand):
             "<li><b>Calculs</b> : <code>outils/calculs/</code> (modèle 2023-24, protocole et simulation, état de la saison, recommandation du jour, validation de la saisie). Aucun HTML.</li>"
             "<li><b>Rendu</b> : <code>outils/rendu/</code> (gabarit, composants, graphiques SVG, une page par module). Aucune couleur.</li>"
             "<li><b>Thème</b> : <code>theme/site.css</code> (variables de couleur, typographie). Le relooking ne touche que ce dossier.</li>"
-            "<li><b>Publication</b> : GitHub Actions reconstruit et publie le site à chaque push, et chaque matin vers 6 h 30 (heure de Toronto) avec la météo, la prévision "
+            "<li><b>Publication</b> : GitHub Actions reconstruit et publie le site à chaque push, et chaque matin vers 5 h 45 (heure de Toronto) avec la météo, la prévision "
             "et les événements Hydro-Québec du jour. Si un téléchargement échoue, le site est construit avec les données versionnées et l'accueil le signale.</li>"
             "<li><b>Recommandation du jour</b> : une seule source, <code>outils/calculs/recommandation.py</code> (règle de budget, détection des creux froids), "
             "appliquée à la prévision d'Environnement Canada pour Vaudreuil-Dorion (Open-Meteo en secours). Publiée dans "

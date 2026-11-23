@@ -2,8 +2,8 @@ name: Publier le site
 
 # Construit et publie le Bûchomètre :
 #  - à chaque push sur main (saisie, code, thème) ;
-#  - chaque matin : cron « 30 11 * * * » = 11 h 30 UTC, soit 6 h 30 à Toronto en heure normale (UTC−5, nov. → mi-mars)
-#    et 7 h 30 en heure avancée (UTC−4, dès le 14 mars 2027). GitHub ne gère pas les fuseaux. Le déclenchement planifié
+#  - chaque matin : cron « 45 10 * * * » = 10 h 45 UTC, soit 5 h 45 à Toronto en heure normale (UTC−5, nov. → mi-mars)
+#    et 6 h 45 en heure avancée (UTC−4, dès le 14 mars 2027). GitHub ne gère pas les fuseaux. Le déclenchement planifié
 #    peut avoir du retard (souvent 5 à 30 min, parfois plus) ; GitHub le suspend après 60 jours sans activité ;
 #  - à la main (workflow_dispatch), qui se comporte comme le cron.
 # Chaque construction télécharge météo, prévisions (Environnement Canada, Open-Meteo) et événements Hydro-Québec (--maj)
@@ -17,7 +17,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "30 11 * * *"
+    - cron: "45 10 * * *"
   workflow_dispatch:
 
 permissions:

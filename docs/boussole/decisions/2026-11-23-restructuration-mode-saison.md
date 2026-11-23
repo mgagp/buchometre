@@ -23,7 +23,7 @@ Livré le 23 nov. 2026 :
 - les 5 entrées de menu, avec des redirections depuis les anciennes adresses ;
 - `data/saisons.json`, qui décrit chaque saison et permet de basculer en 2027-28 sans toucher au code ;
 - trois couches séparées : `outils/calculs/` (aucun HTML), `outils/rendu/` (aucune couleur), `theme/` (apparence) ;
-- une reconstruction chaque matin à 11 h 30 UTC (6 h 30 à Toronto en hiver), sans commit, avec repli sur les données versionnées ;
+- une reconstruction chaque matin à 11 h 30 UTC (6 h 30 à Toronto en hiver ; devancée le 2026-11-23 à 10 h 45 UTC, 5 h 45, pour précéder la routine de 7 h même avec un retard de GitHub et en heure avancée), sans commit, avec repli sur les données versionnées ;
 - une validation de la saisie qui échoue en mode fermé : une erreur bloque la publication.
 
 Reste pour l'étape 2 : le calendrier complet, l'historique des recommandations (un commit par jour) et le plan recalculé sur la météo réelle.

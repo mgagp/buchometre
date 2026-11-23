@@ -54,7 +54,7 @@ puis jours les plus froids), avec un stock de bois limité.
 - Points d'entrée : `outils/preparer_donnees.py`, `outils/generer_site.py`, `outils/verifier_site.py`,
   `outils/enregistrer_recommandation.py` (ligne du jour dans l'historique ; appelé par le workflow du matin).
 - `rapports/` : site généré, **non versionné** (sauf `rapports/img/`). GitHub Actions le reconstruit et le publie à chaque
-  push sur `main`, chaque matin à 11 h 30 UTC (6 h 30 à Toronto en hiver, 7 h 30 en été) et à la main
+  push sur `main`, chaque matin à 10 h 45 UTC (5 h 45 à Toronto en hiver, 6 h 45 en été) et à la main
   (`.github/workflows/pages.yml`). En CI, `--maj` rafraîchit météo, prévisions et événements pour la construction
   (sans les commiter) ; si un téléchargement échoue, les fichiers versionnés sont utilisés et l'accueil le dit.
   Le cron et le lancement manuel commitent en plus la recommandation du jour (`github-actions[bot]`, `GITHUB_TOKEN`,
