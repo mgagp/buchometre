@@ -124,6 +124,8 @@ def calendrier_saison(jours, debut, fin, auj):
                 cl.append("auj")
             if j.get("evt"):
                 cl.append("evt-" + j.get("evt_statut", "annonce"))
+            if j.get("reco_feu"):
+                cl.append("reco-feu")
             b = j.get("buches")
             contenu = (f"<span class='pastille'>{nb(b)}</span>" if b else "")
             if j.get("evt"):
@@ -145,4 +147,5 @@ def legende_calendrier():
             "<span class='leg'><i class='t-glacial'></i>&lt; −15</span><br><span class='leg'><i class='prev'></i>prévision</span>"
             "<span class='leg'><i class='auj'></i>aujourd'hui</span><span class='leg'><span class='pastille'>6</span> bûches saisies</span>"
             "<span class='leg'><span class='losange'>◆</span> événement Flex D</span><span class='leg'><span class='croix'>✕</span> jour à saisir</span>"
+            "<span class='leg'><i class='reco-feu'></i>feu recommandé ce matin-là</span>"
             "<br>Losange plein : événement couvert par un feu ; contour seul : manqué ou non saisi. Toucher une case affiche le détail.</div>")

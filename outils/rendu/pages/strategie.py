@@ -19,6 +19,7 @@ SOURCES = [
     ("Hydro-Québec, données ouvertes « Événements de pointe – saison hivernale » (TPC-DPC = Flex D, CPC-D = crédit hivernal)", "https://donnees.hydroquebec.com/explore/dataset/evenements-pointe/"),
     ("Hydro-Québec, Historique des résultats (bilan par hiver)", "https://www.hydroquebec.com/residentiel/mieux-consommer/pourquoi-mieux-consommer/bilan-efforts-collectifs/historique-resultats.html"),
     ("Open-Meteo, API d'archives historiques (réanalyse ERA5), point 45,40 N / −74,03 O (Vaudreuil-Dorion)", "https://open-meteo.com/en/docs/historical-weather-api"),
+    ("Environnement Canada, prévisions pour Vaudreuil-Dorion (recommandation du jour ; Open-Meteo en secours)", "https://meteo.gc.ca/fr/location/index.html?coords=45.4,-74.04"),
 ]
 
 
@@ -154,10 +155,13 @@ def main(quand, a_faire=""):
              f"(au plus 0,45 bûche par degré-jour), si le stock après le feu reste au-dessus de la réserve. <span class='petit'>Avant le 22 nov. : ≤ {nb(RA['seuil'])} °C et {RA['max']} bûches.</span></li>"
              f"<li><b>À partir du 1er janvier</b> : le surplus au-dessus de la réserve peut aller à tout jour froid (≤ 0 °C), {H['regle_max_coeur']} bûches au plus. "
              "<span class='petit'>Avant : à partir du 1er février.</span> Le stock qui reste en avril n'est pas perdu (il sert l'hiver suivant).</li>"
-             "<li><b>Si le stock baisse plus vite que prévu</b> (plus de 50 bûches sous le jalon du mois, ou recomptage plus bas) : suspendre les feux de jours cœur, "
+             "<li><b>Si le stock baisse plus vite que prévu</b> (plus de 50 bûches sous le plan, c.-à-d. la règle appliquée à la météo réelle, ou recomptage plus bas) : suspendre les feux de jours cœur, "
              "ne garder que les événements jusqu'à revenir sur la courbe.</li>"
              "<li><b>Jour témoin</b> : environ un jour froid par mois sans feu (et sans événement), noté « témoin ».</li>"
              "<li><b>Saisie</b> chaque jour, même sans feu, dans <code>data/saisie_2026-2027.csv</code> ; le <a href='journal.html'>Journal</a> suit le stock restant contre le plan.</li></ol>"
+             "<p class='petit'>La recommandation de l'accueil applique ces règles telles quelles (<code>outils/calculs/recommandation.py</code>, la même fonction que la simulation), "
+             "à la prévision d'Environnement Canada (Open-Meteo en secours). « Nettement sous la normale » : jour d'un creux froid (moyenne sur 3 jours au moins 2 °C sous la médiane "
+             "des 31 jours autour, réel puis prévision) et au moins 3 °C sous cette médiane. Le jour témoin reste au choix de Marc : il n'est pas proposé automatiquement.</p>"
              "<table><tr><th>Jalon</th><th>Stock prévu (3 météos)</th><th>Réserve événements</th></tr>" +
              "".join(f"<tr><td>{lib}</td><td class=n>{' / '.join(str(x) for x in stk_j[lib])}</td><td class=n>{res_j[lib]}</td></tr>" for lib, _ in jalons) + "</table>"
              "<p class='petit'>Rythme médian simulé : nov. " + nb(rythme["11"]) + " · déc. " + nb(rythme["12"]) + " · janv. " + nb(rythme["01"]) + " · févr. " + nb(rythme["02"]) + " · mars " + nb(rythme["03"]) +

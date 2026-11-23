@@ -3,7 +3,8 @@ import html, datetime as dt
 from rendu import graphes as svg
 from rendu.gabarit import page
 from rendu.composants import carte, calendrier_saison, legende_calendrier, nb, argent, dfr
-from rendu.pages.saison import graphe_stock
+from rendu.pages.saison import graphe_stock, tableau_historique
+from calculs.saison import fichier_reco
 from calculs import valider_saisie
 
 E = html.escape
@@ -21,6 +22,11 @@ def rendre(e, quand):
     if e["manquants"]:
         h.append("<p class='alerte'>À saisir : " + ", ".join(dfr(d, jour=True) for d in e["manquants"]) + ".</p>")
     h.append("<h2 id='calendrier'>Calendrier</h2>" + calendrier_saison(e["calendrier"], dt.date.fromisoformat(sa["debut"]), dt.date.fromisoformat(sa["fin"]), e["aujourd_hui"]) + legende_calendrier())
+    th = tableau_historique(e)
+    h.append("<h2 id='historique'>Recommandé, puis fait</h2>" + (th + "<p class='petit'>Recommandé : la recommandation publiée ce matin-là, conservée dans "
+             f"<a href='data/{E(fichier_reco(sa))}'>data/{E(fichier_reco(sa))}</a> (un commit automatique par jour). Fait : bûches saisies. "
+             "« Suivi » : feu recommandé et fait, ou pas de feu recommandé et aucun feu.</p>" if th else
+             "<p class='vide'>Aucune recommandation enregistrée pour l'instant : la première sera conservée au prochain matin.</p>"))
     h.append("<h2 id='jours'>Toutes les journées saisies</h2>")
     if S:
         h.append("<table><tr><th>Date</th><th>Bûches</th><th>Stock restant</th><th>kWh</th><th>Événement</th><th>Témoin</th><th>T moy.</th><th>kWh attendus</th><th>Écart</th><th>Valeur</th><th>Remarque</th></tr>" +
@@ -31,29 +37,17 @@ def rendre(e, quand):
     else:
         h.append("<p class='vide'>Aucune journée saisie pour l'instant : le tableau et les courbes « réel » se rempliront au fil des saisies.</p>")
     # suivi réel contre plan
-    h.append("<h2 id='stock'>Stock : réel et plan</h2>" + graphe_stock(e, h=300, w=640) +
+    h.append("<h2 id='stock'>Stock : réel, plan et projection</h2>" + graphe_stock(e, h=300, w=640) +
              "<p class='petit'>Si la courbe réelle passe plus de 50 bûches sous le plan, ou sous la réserve : ne garder que les événements (règle 5).</p>")
-    c = e["courbe"]; par = {s["date"]: s for s in S}
-    cum_r, cum, vals_r = 0.0, [], []
-    plan = e["plan_saison"]
-    # valeur cumulée : projection (plan à date) contre réel
-    import json, os
-    from chemins import DATA
-    import csv
-    rows = [r for r in csv.DictReader(open(os.path.join(DATA, "protocole_simulation_stock.csv"), encoding="utf-8")) if r["hiver_meteo"] == e["plan_meteo"]]
-    pv = {r["date_2026_2027"]: float(r["valeur_base"]) for r in rows}
-    cp = 0.0; last = S[-1]["date"] if S else None
-    for x in c:
-        k = x["date"].isoformat(); cp += pv.get(k, 0); cum.append(round(cp, 1))
-        if k in par:
-            cum_r += par[k]["valeur"]
-        vals_r.append(round(cum_r, 1) if (last and k <= last and (S[0]["date"] <= k)) else None)
+    c = e["courbe"]
     auj = next((i for i, x in enumerate(c) if x["date"] == e["aujourd_hui"]), None)
-    h.append("<h2 id='valeur'>Valeur évitée cumulée : réel et projection</h2>" +
+    h.append("<h2 id='valeur'>Valeur évitée cumulée : réel, plan et projection</h2>" +
              svg.series([dfr(x["date"]) for x in c], [
-                 {"nom": "Projection (plan, hors prime)", "valeurs": cum, "couleur": "plan", "pointille": True, "points": False},
-                 {"nom": "Réel (hors prime d'événement)", "valeurs": vals_r, "couleur": "vert", "points": False, "epaisseur": 3}], titre_g="$", h=280, w=640, auj=auj) +
-             "<p class='petit'>La prime d'événement réelle n'est pas encore mesurée (il faudrait les kWh horaires des jours d'événement).</p>")
+                 {"nom": "Plan (météo réelle, hors prime)", "valeurs": [x["v_plan"] for x in c], "couleur": "plan", "pointille": True, "points": False},
+                 {"nom": "Projection (hors prime)", "valeurs": [x["v_proj"] for x in c], "couleur": "projection", "pointille": True, "points": False},
+                 {"nom": "Réel (hors prime)", "valeurs": [x["v_reel"] for x in c], "couleur": "vert", "points": False, "epaisseur": 3}], titre_g="$", h=280, w=640, auj=auj) +
+             "<p class='petit'><b>Limite :</b> la prime d'événement réelle (l'électricité évitée pendant les heures de pointe, facturée environ 46 ¢/kWh) "
+             "n'est pas mesurée : il faudrait les kWh horaires des jours d'événement. Les montants ci-dessus comptent seulement le tarif hors événement.</p>")
     if S:
         h.append("<h2 id='kwh'>kWh réels et attendus</h2>" + svg.series([dfr(s["date"]) for s in S], [
             {"nom": "kWh réels", "valeurs": [s["kwh"] for s in S], "couleur": "reel"},

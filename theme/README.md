@@ -14,10 +14,10 @@ dans `outils/rendu/gabarit.py`). La saisie quotidienne ne touche jamais ce dossi
 
 ## Classes stables
 - Gabarit : `header.site`, `.marque`, `.contexte`, `nav.menu`, `.onglet(.actif)`, `nav.sousnav`, `main.contenu`, `footer.pied`, `body.tableau-de-bord`.
-- Tableau de bord : `.bloc`, `.bloc-titre`, `.bloc-lien`, `.grille-blocs`, `.bloc-jour`, `.verdict(-feu|-non|-na)`, `.raison`, `.vignettes`, `.vignette(.actif|.feu)`,
+- Tableau de bord : `.bloc`, `.bloc-titre`, `.bloc-lien`, `.grille-blocs`, `.bloc-jour`, `.verdict(-feu|-non|-na)`, `.raison`, `.vignettes`, `.vignette(.actif|.feu|.coeur)`, `.evt-jour`,
   `.chiffre`, `.jauge`, `.jauge-reserve`, `.jauge-valeur`, `.jauge-repere`, `.temps`, `.temps-zone.zone-critique`, `.temps-ecoule`, `.temps-marque`,
   `.temps-auj`, `.temps-axe`, `.minis`, `.mini`, `.mini-barre`, `.mini-reel`, `.mini-plan`, `.compteurs`, `.compteur(.c-couvert|.c-manque)`, `.vide`, `.liens-bas`.
-- Calendrier : `table.calendrier`, cases `.t-*` (température), `.prev`, `.auj`, `.st-saisi|.st-manquant|.st-futur|.st-avant`, `.evt-annonce|.evt-couvert|.evt-manque|.evt-nonsaisi`,
+- Calendrier : `table.calendrier`, cases `.t-*` (température), `.prev`, `.auj`, `.st-saisi|.st-manquant|.st-futur|.st-avant`, `.evt-annonce|.evt-couvert|.evt-manque|.evt-nonsaisi`, `.reco-feu` (feu recommandé ce matin-là),
   `.pastille`, `.losange`, `.croix`, `.legende`, `.leg`.
 - Analyse : `.cartes`, `.carte(.ok|.ko|.neutre|.prov)`, `.alerte`, `.info`, `.petit`, `.badge`, `.tab`, `.defile`, `.graphe`, `.ax`, `.grille`, `.axe0`, `.ligne-auj`, `.pile-*`.
 

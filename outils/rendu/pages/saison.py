@@ -15,54 +15,95 @@ def _t(x):
     return "—" if x is None else (f"{x:.1f}".replace(".", ",").replace("-", "−") + " °C")
 
 
+def _src(e):
+    """Ligne « source » : prévision utilisée, rafraîchissement, et ce qui a échoué (mode ouvert visible)."""
+    pv, maj = e["prevision"], e["maj"]
+    alertes = []
+    if pv["source"] is None:
+        alertes.append("Prévision indisponible pour aujourd'hui : la règle n'est pas appliquée (mode ouvert).")
+    elif pv["secours"]:
+        alertes.append("Environnement Canada indisponible : prévision Open-Meteo utilisée en secours.")
+    if maj and maj["sources"].get("evenements_hq", {}).get("ok") is False:
+        alertes.append("Événements Hydro-Québec non rafraîchis ce matin : vérifier l'avis officiel.")
+    if pv["source"]:
+        quand = pv["ec_emis"] if pv["source"] == "Environnement Canada" else pv["om_quand"]
+        txt = f"Prévision : {E(pv['source'])}" + (f" (émise le {E(quand.replace(' ', ' à '))})" if quand else "")
+    else:
+        txt = "Prévision : aucune source à jour"
+    if maj:
+        ko = [k for k, v in maj["sources"].items() if not v["ok"]]
+        txt += f" · données rafraîchies le {E(maj['quand'][:16].replace('T', ' à '))}" + (f" (échec : {', '.join(ko)} ; fichiers versionnés utilisés)" if ko else "")
+    else:
+        txt += " · données versionnées du dépôt (pas de rafraîchissement pour cette construction)"
+    return "".join(f"<p class='alerte'>{E(a)}</p>" for a in alertes), txt
+
+
+def _verdict(v):
+    if v["feu"] is None:
+        return "Prévision indisponible", "verdict-na"
+    if v["feu"]:
+        return f"Feu : ≈ {v['buches']} bûches", "verdict-feu"
+    return "Pas de feu", "verdict-non"
+
+
+def texte_creux(e):
+    out = []
+    for c in e["creux_prevus"]:
+        coeur = (" ; cœur : " + ", ".join(dfr(d) for d in c["coeur"])) if c["coeur"] else " ; pas de jour cœur prévu"
+        out.append(f"Creux froid {'en cours' if c['en_cours'] else 'prévu'} du {dfr(c['debut'])} au {dfr(c['fin'])} "
+                   f"(minimum {_t(c['t_min'])} le {dfr(c['date_min'])}{coeur}).")
+    return " ".join(out)
+
+
 def bloc_jour(e):
     r = e["reco"]; auj = r[1]
     if e["terminee"]:
         return bloc("Saison terminée", f"<p class='verdict'>Bilan au {dfr(e['saison']['fin'], annee=True)}</p>"
                     "<p>La saison est close : les chiffres ci-dessous sont définitifs.</p>", "bloc-jour")
-    if auj["feu"] is None:
-        verdict, cl = "Prévision indisponible", "verdict-na"
-    elif auj["feu"]:
-        verdict, cl = f"Feu : ≈ {auj['buches']} bûches", "verdict-feu"
-    else:
-        verdict, cl = "Pas de feu", "verdict-non"
+    verdict, cl = _verdict(auj)
     vign = []
     for k, v in enumerate(r):
         lib = ["hier", "aujourd'hui", "demain", JOURS_FR[v["date"].weekday()]][k]
         if k == 0:
-            bas = (f"{nb(v['buches'])} bûches" if v["saisi"] else ("à saisir" if v["a_saisir"] else "—"))
+            bas = (f"fait · {nb(v['buches'])}" if v["saisi"] else ("à saisir" if v["a_saisir"] else "—"))
         else:
             bas = "—" if v["feu"] is None else (f"feu · {v['buches']}" if v["feu"] else "pas de feu")
         evt = "<span class='losange' title='événement Flex D'>◆</span>" if v["evt"] else ""
-        vign.append(f"<div class='vignette{' actif' if k == 1 else ''}{' feu' if k and v.get('feu') else ''}'><span class='v-lib'>{lib}</span>"
+        froid = " coeur" if v["coeur"] else ""
+        vign.append(f"<div class='vignette{' actif' if k == 1 else ''}{' feu' if k and v.get('feu') else ''}{froid}'><span class='v-lib'>{lib}</span>"
                     f"<b>{_t(v['t'])}</b>{evt}<span class='v-bas'>{bas}</span></div>")
     detail = (f"min {_t(auj['tmin'])}, max {_t(auj['tmax'])}" if auj["tmin"] is not None else "")
-    maj = e["maj"]
-    if maj:
-        ok = [k for k, v in maj["sources"].items() if v["ok"]]; ko = [k for k, v in maj["sources"].items() if not v["ok"]]
-        src = f"Données rafraîchies le {E(maj['quand'][:16].replace('T', ' à '))}" + (f" ; échec : {', '.join(ko)} (données versionnées utilisées)" if ko else "")
-    else:
-        src = "Données versionnées du dépôt (pas de rafraîchissement automatique pour cette construction)"
+    alertes, src = _src(e)
     raison = auj['raison'][:1].upper() + auj['raison'][1:]
-    corps = (f"<p class='verdict {cl}'>{verdict}</p><p class='raison'>{E(raison)}{'' if raison.endswith('.') else '.'}"
+    evt = (f"<p class='evt-jour'><b>Événement Flex D aujourd'hui : {E(auj['evenement'])}.</b> {E(auj['moment'][:1].upper() + auj['moment'][1:])}.</p>"
+           if auj["evenement"] else "")
+    demain = r[2]
+    if demain["evt"]:
+        evt += f"<p class='evt-jour'><b>Événement Flex D demain : {E(demain['evenement'])}.</b> {E(demain['moment'][:1].upper() + demain['moment'][1:])}.</p>"
+    moment = (f" <span class='petit'>{E(auj['moment'][:1].upper() + auj['moment'][1:])}.</span>" if auj["moment"] and not auj["evenement"] else "")
+    cr = texte_creux(e)
+    corps = (alertes + f"<p class='verdict {cl}'>{verdict}</p>{evt}<p class='raison'>{E(raison)}{'' if raison.endswith('.') else '.'}{moment}"
              + (f" <span class='petit'>({detail})</span>" if detail else "") + "</p>"
              f"<div class='vignettes'>{''.join(vign)}</div>"
-             f"<p class='source'>Règle de budget du protocole appliquée à la prévision Open-Meteo"
-             + (f" (téléchargée le {E(e['prevision_quand'])})" if e["prevision_quand"] else "")
-             + f" et aux événements annoncés par Hydro-Québec. {src}. L'avis officiel d'Hydro-Québec a priorité.</p>")
+             + (f"<p class='petit'>{E(cr)}</p>" if cr else "")
+             + f"<p class='source'>{src}. Règle de budget du protocole, événements annoncés par Hydro-Québec ; l'avis officiel d'Hydro-Québec a priorité.</p>")
     return bloc(f"Aujourd'hui · {dfr(auj['date'], jour=True)}", corps, "bloc-jour", "aujourdhui", ("strategie/index.html#regles", "règles"))
 
 
 def bloc_stock(e):
     s = e["stock"]
-    txt = (f"Plan à ce jour : {nb(s['plan'])} · réserve pour les événements : {nb(s['reserve'])} · marge sur la réserve : <b>{'+' if s['marge'] >= 0 else ''}{nb(s['marge'])}</b>.")
+    ref = dfr(s["date_reference"])
+    txt = (f"Plan au {ref} (règle sur la météo réelle) : {nb(s['plan'])} · réserve pour les événements : {nb(s['reserve'])} · "
+           f"marge sur la réserve : <b>{'+' if s['marge'] >= 0 else ''}{nb(s['marge'])}</b>.")
     if not e["saisie"]:
-        txt += f" Aucune saisie : stock = inventaire mesuré du {dfr(s['date_inventaire'])}"
+        di = dfr(s['date_inventaire'])
+        txt += f" Aucune saisie : stock = inventaire mesuré du {di}" + ("" if di.endswith(".") else ".")
     else:
-        txt += f" Écart au plan : {'+' if s['ecart_plan'] >= 0 else ''}{nb(s['ecart_plan'])} bûches."
+        txt += f" Écart au plan : <b>{'+' if s['ecart_plan'] >= 0 else ''}{nb(s['ecart_plan'])}</b> bûches (au {ref})."
+    txt += f" Fin de saison projetée : ≈ {nb(s['fin_projetee'])} bûches."
     alerte = ("<p class='alerte'>Le stock est plus de 50 bûches sous le plan : <b>événements seulement</b> jusqu'à revenir sur la courbe (règle 5).</p>" if s["frein"] else "")
     corps = (f"<p class='chiffre'>{nb(s['actuel'])} <span>bûches</span></p>" +
-             jauge(s["actuel"], s["depart"], s["reserve"], s["plan"], "plan à ce jour") +
+             jauge(s["actuel"], s["depart"], s["reserve"], s["plan"], "plan") +
              f"<p class='petit'>{txt}</p>{alerte}")
     return bloc("Stock de bois", corps, "bloc-stock", "stock", ("strategie/inventaire.html", "inventaire"))
 
@@ -87,14 +128,15 @@ def bloc_temps(e):
 
 
 def bloc_cumuls(e):
-    r, pd, ps, fo = e["reel"], e["plan_date"], e["plan_saison"], e["fourchette"]
+    r, pd, ps, fo = e["reel"], e["plan_date"], e["projection_saison"], e["fourchette"]
     a0 = lambda x: argent(x, 0)
     corps = ("<div class='minis'>" + mini_barre("Bûches", r["buches"], pd["buches"], ps["buches"]) +
              mini_barre("kWh évités", r["kwh"], pd["kwh"], ps["kwh"]) +
              mini_barre("$ évités", r["base"], pd["base"], ps["base"], fmt=a0) + "</div>"
-             f"<p class='petit'>Barre : réel · trait : plan à ce jour · chiffres : réel / plan à ce jour · plan de saison (règle de budget, météo {e['plan_meteo']}). "
-             f"Les $ comptent l'électricité évitée hors prime d'événement ; la prime prévue au plan s'ajoute (≈ {a0(ps['prime'])} sur la saison). "
-             + (f"Selon la météo des 3 derniers hivers, la valeur totale du plan va de {a0(fo['base'][0])} à {a0(fo['base'][1])}." if fo else "") + "</p>")
+             f"<p class='petit'>Barre : réel · trait : plan à ce jour (règle de budget appliquée à la météo réelle depuis l'inventaire) · "
+             "chiffres : réel / plan à ce jour · saison projetée (réel, puis la règle sur la prévision, puis la dépense moyenne des 3 derniers hivers sous la règle). "
+             "Les $ comptent l'électricité évitée hors prime d'événement. "
+             + (f"Selon la météo des 3 derniers hivers, la valeur totale du plan, prime comprise, va de {a0(fo['base'][0])} à {a0(fo['base'][1])}." if fo else "") + "</p>")
     if not e["saisie"]:
         corps += "<p class='vide'>Aucune saisie pour l'instant : la partie « réel » se remplira au fil des journées.</p>"
     return bloc("Réel et projection", corps, "bloc-cumuls", "cumuls", ("strategie/plan.html", "plan"))
@@ -127,26 +169,51 @@ def graphe_stock(e, h=270, w=480):
     labs = [dfr(x["date"]) for x in c]
     auj = next((i for i, x in enumerate(c) if x["date"] == e["aujourd_hui"]), None)
     return svg.series(labs, [
-        {"nom": "Plan", "valeurs": [x["plan"] for x in c], "couleur": "plan", "pointille": True, "points": False},
         {"nom": "Réserve", "valeurs": [x["reserve"] for x in c], "couleur": "reserve", "type": "area", "points": False, "epaisseur": 1},
+        {"nom": "Plan (météo réelle)", "valeurs": [x["plan"] for x in c], "couleur": "plan", "pointille": True, "points": False},
+        {"nom": "Projection", "valeurs": [x["projection"] for x in c], "couleur": "projection", "pointille": True, "points": False, "epaisseur": 2},
         {"nom": "Réel", "valeurs": [x["reel"] for x in c], "couleur": "buche", "points": len([x for x in c if x["reel"] is not None]) < 3, "epaisseur": 3},
     ], titre_g="bûches", h=h, w=w, auj=auj)
 
 
 def bloc_courbe(e):
     return bloc("Le stock dans le temps", graphe_stock(e) +
-                "<p class='petit'>Pointillé : stock prévu par le plan · zone : réserve à garder pour les événements · trait plein : stock réel (inventaire, puis saisies) · ligne verticale : aujourd'hui.</p>",
+                "<p class='petit'>Trait plein : stock réel (inventaire, puis saisies) · pointillé gris : ce que la règle aurait brûlé avec la météo réelle · "
+                "pointillé de couleur : projection jusqu'au 31 mars (prévision, puis dépense moyenne des 3 derniers hivers sous la règle) · "
+                "zone : réserve à garder pour les événements · ligne verticale : aujourd'hui.</p>",
                 "bloc-courbe", "courbe")
 
 
+def _reco_court(h):
+    if not h:
+        return "—"
+    if h["recommandation"] == "feu":
+        return f"feu · {h['buches']}" + (" ◆" if h["evenement"] else "")
+    return h["recommandation"]
+
+
+def tableau_historique(e, n=None):
+    H = e["historique"][::-1]
+    if n:
+        H = H[:n]
+    if not H:
+        return ""
+    lignes = []
+    for x in H:
+        suivi = {True: "<span class='b-ok badge'>suivi</span>", False: "<span class='b-prov badge'>écart</span>", None: ""}[x["suivi"]]
+        fait = "à saisir" if x["fait"] is None else nb(x["fait"])
+        lignes.append(f"<tr><td>{dfr(x['date'], jour=True)}</td><td>{E(_reco_court(x['reco']))}</td><td class=n>{fait}</td>"
+                      f"<td class=n>{nb(x['kwh']) if x['kwh'] is not None else ''}</td><td>{suivi}</td></tr>")
+    return ("<table class='compact'><tr><th>Jour</th><th>Recommandé</th><th>Bûches faites</th><th>kWh</th><th></th></tr>" + "".join(lignes) + "</table>")
+
+
 def bloc_derniers(e):
-    S = e["saisie"][-5:][::-1]
-    if S:
-        corps = ("<table class='compact'><tr><th>Jour</th><th>Bûches</th><th>kWh</th><th>Écart au modèle</th></tr>" +
-                 "".join(f"<tr><td>{dfr(s['date'], jour=True)}</td><td class=n>{nb(s['buches'])}</td><td class=n>{nb(s['kwh']) if s['kwh'] is not None else 'en attente'}</td>"
-                         f"<td class=n>{'' if s['ecart'] is None else ('+' if s['ecart'] >= 0 else '') + nb(s['ecart'])}</td></tr>" for s in S) + "</table>")
+    t = tableau_historique(e, 7)
+    if t:
+        corps = t + "<p class='petit'>Recommandé : verdict publié ce matin-là (historique versionné, un commit par jour). Fait : bûches saisies.</p>"
     else:
-        corps = "<p class='vide'>Aucune saisie pour l'instant. Il suffit d'écrire « hier 8 bûches, 62 kWh » (ou plusieurs jours d'un coup) : la ligne s'ajoute et le site se met à jour.</p>"
+        corps = ("<p class='vide'>Aucune recommandation enregistrée ni saisie pour l'instant. Chaque matin, la recommandation du jour est conservée ; "
+                 "il suffit d'écrire « hier 8 bûches, 62 kWh » pour la comparer à ce qui a été fait.</p>")
     m = e["manquants"]
     if m:
         corps += f"<p class='alerte'>Jours à saisir ({len(m)}) : " + ", ".join(dfr(d) for d in m[-10:]) + (" …" if len(m) > 10 else "") + "</p>"
@@ -154,7 +221,7 @@ def bloc_derniers(e):
         corps += f"<p class='petit'>Jours à saisir : aucun (le suivi des jours manquants commence le {dfr(e['debut_suivi'])}).</p>"
     if e["kwh_attente"]:
         corps += "<p class='petit'>kWh en attente : " + ", ".join(dfr(d) for d in e["kwh_attente"]) + "</p>"
-    return bloc("Derniers jours saisis", corps, "bloc-derniers", "derniers", ("journal.html", "journal complet"))
+    return bloc("Recommandé et fait", corps, "bloc-derniers", "derniers", ("journal.html#historique", "historique"))
 
 
 def rendre(e, chemin, quand):

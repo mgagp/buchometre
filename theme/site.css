@@ -15,7 +15,7 @@
   --g-fond_e:#f3f3f3; --g-ardoise:#455a64; --g-temp_pale:#80cbc4; --g-encre:#000000; --g-gris_bleu:#90a4ae; --g-gris_pale:#b0bec5;
   --g-bleu_pale:#90caf9; --g-violet_pale:#ce93d8; --g-bleu_fonce:#0d47a1; --g-evt:#c62828; --g-plan:#8d8d8d; --g-reserve:#e07a5f;
   --g-zone_creux:#dbe9ff; --g-zone_marc:rgba(255,152,0,.18); --g-zone_critique:rgba(33,150,243,.14); --g-cal_sansfeu:#cfd8dc;
-  --g-cal_extrapole:#e0e0e0; --g-pile_rect:#ffb74d; --g-pile_pente:#ffcc80; --g-pile_tri:#ffe0b2; --g-pile_trait:#e65100; --g-axe:#555555;
+  --g-cal_extrapole:#e0e0e0; --g-pile_rect:#ffb74d; --g-pile_pente:#ffcc80; --g-pile_tri:#ffe0b2; --g-pile_trait:#e65100; --g-axe:#555555; --g-projection:#1565c0;
   --police:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   --rayon:10px;
 }
@@ -148,3 +148,11 @@ img.croquis{max-width:100%;border:1px solid var(--ligne);border-radius:6px}
   .compteurs{grid-template-columns:repeat(3,1fr)}
   .verdict{font-size:25px}
 }
+
+/* --- étape 2 : recommandation, creux, historique --- */
+.vignette.coeur{box-shadow:inset 0 -3px 0 var(--g-reel)}
+.evt-jour{margin:4px 0;padding:6px 8px;border-left:4px solid var(--g-evt);background:var(--accent-doux)}
+.badge{display:inline-block;padding:0 6px;border-radius:8px;font-size:11px}
+.calendrier td.reco-feu{box-shadow:inset 0 -3px 0 var(--feu)}
+.calendrier td.coeur .num,.calendrier td.coeur{font-weight:700}
+.leg i.reco-feu{box-shadow:inset 0 -3px 0 var(--feu)}

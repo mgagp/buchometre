@@ -6,7 +6,7 @@ E = html.escape
 # Couleurs : aucune valeur ici. Chaque clé renvoie à une variable CSS --g-<clé> définie dans theme/site.css.
 CLES = ["reel", "sansfeu", "marc", "buche", "temp", "gris", "vert", "fond_e", "ardoise", "temp_pale", "encre", "gris_bleu", "gris_pale",
         "bleu_pale", "violet_pale", "bleu_fonce", "evt", "plan", "reserve", "zone_creux", "zone_marc", "zone_critique", "cal_sansfeu",
-        "cal_extrapole", "pile_rect", "pile_pente", "pile_tri", "pile_trait", "axe"]
+        "cal_extrapole", "pile_rect", "pile_pente", "pile_tri", "pile_trait", "axe", "projection"]
 COUL = {k: f"var(--g-{k})" for k in CLES}
 
 
