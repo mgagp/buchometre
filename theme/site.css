@@ -81,6 +81,7 @@ code{background:var(--ligne-douce);padding:1px 4px;border-radius:3px;font-size:.
 .vignette{border:1px solid var(--ligne);border-radius:8px;padding:6px 4px;text-align:center;font-size:12px;display:flex;flex-direction:column;gap:1px}
 .vignette b{font-size:15px}.vignette.actif{border-color:var(--encre)}.vignette.feu{background:var(--accent-doux)}
 .v-lib,.v-bas{color:var(--encre-douce)}
+.v-sous{color:var(--encre-douce);font-size:11px}
 .source{font-size:11px;color:var(--encre-douce);margin:10px 0 0}
 .chiffre{font-size:28px;font-weight:800;margin:0}.chiffre span{font-size:14px;font-weight:400;color:var(--encre-douce)}
 .jauge{position:relative;height:20px;background:var(--ligne-douce);border-radius:10px;margin:8px 0 6px;overflow:hidden}

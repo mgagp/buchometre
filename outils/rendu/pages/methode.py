@@ -33,6 +33,8 @@ def rendre(sortie, quand):
             "appliquée à la prévision d'Environnement Canada pour Vaudreuil-Dorion (Open-Meteo en secours). Publiée dans "
             "<a href='data/recommandation.json'>data/recommandation.json</a> et conservée chaque matin, par un commit automatique, dans "
             "<code>data/recommandations_AAAA-AAAA.csv</code>.</li>"
+            "<li><b>Moment du feu</b> : <code>plan_feu()</code> (même module) donne les heures d'allumage et de baisse ; il ne change ni la décision ni le nombre de bûches. "
+            "L'heure du min vient de la prévision horaire d'EC (24 h), sinon d'Open-Meteo (« modèle ») ; pour les jours passés, des relevés horaires d'EC.</li>"
             "<li><b>Plan et projection</b> : le plan applique la règle de budget à la météo réelle depuis l'inventaire ; la projection part du dernier stock connu, "
             "suit la règle sur la prévision, puis la dépense moyenne des trois derniers hivers simulés sous la règle.</li>"
             "<li><b>Limite</b> : la prime d'événement réelle n'est pas mesurée (il faudrait les kWh horaires des jours d'événement) ; seule la valeur hors événement est suivie.</li>"

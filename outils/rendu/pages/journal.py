@@ -10,6 +10,14 @@ from calculs import valider_saisie
 E = html.escape
 
 
+def _hmin(x):
+    """Heure du min observée (EC climate-hourly, heure de Toronto) : « 7 h », « minuit » (0 h le lendemain) ou « — »."""
+    h = x.get("heure_min")
+    if not h:
+        return "—"
+    return "minuit" if h[:10] != x["date"].isoformat() else f"{int(h[11:13])} h"
+
+
 def rendre(e, quand):
     sa = e["saison"]; S = e["saisie"]
     erreurs, avert = valider_saisie.valider()
@@ -29,10 +37,10 @@ def rendre(e, quand):
              "<p class='vide'>Aucune recommandation enregistrée pour l'instant : la première sera conservée au prochain matin.</p>"))
     mo = e["meteo_observee"][::-1]
     if mo:
-        h.append("<h2 id='meteo'>Météo observée (30 derniers jours)</h2><table class='compact'><tr><th>Date</th><th>Min</th><th>Max</th><th>Moyenne</th><th>Source</th></tr>" +
-                 "".join(f"<tr><td>{dfr(x['date'], jour=True)}</td><td class=n>{nb(x['tmin'], 1)}</td><td class=n>{nb(x['tmax'], 1)}</td><td class=n>{nb(x['t'], 1)}</td>"
+        h.append("<h2 id='meteo'>Météo observée (30 derniers jours)</h2><table class='compact'><tr><th>Date</th><th>Min</th><th>Max</th><th>Heure du min</th><th>Moyenne</th><th>Source</th></tr>" +
+                 "".join(f"<tr><td>{dfr(x['date'], jour=True)}</td><td class=n>{nb(x['tmin'], 1)}</td><td class=n>{nb(x['tmax'], 1)}</td><td class=n>{_hmin(x)}</td><td class=n>{nb(x['t'], 1)}</td>"
                          f"<td>{E(x['etiquette'])}</td></tr>" for x in mo) + "</table>"
-                 f"<p class='petit'>Source canonique : {E(e['meteo_libelle'])}, données climatiques quotidiennes ; moyenne = (max + min) / 2. "
+                 f"<p class='petit'>Source canonique : {E(e['meteo_libelle'])}, données climatiques quotidiennes ; moyenne = (max + min) / 2 ; heure du min : relevés horaires d'EC (climate-hourly) de la même station, heure de Toronto. "
                  "Les 30 derniers jours sont retéléchargés chaque matin (révisions d'Environnement Canada acceptées) dans "
                  f"<a href='data/{E(e['saison'].get('meteo_observee', ''))}'>data/{E(e['saison'].get('meteo_observee', ''))}</a>. "
                  "Un jour sans mesure (station en panne, ou pas encore publié) est complété par Open-Meteo et marqué « estimation par modèle ».</p>")

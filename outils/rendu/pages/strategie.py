@@ -8,6 +8,7 @@ from rendu import graphes as svg
 from rendu import gabarit
 from rendu.gabarit import page
 from rendu.composants import carte, argent, nb, pct
+from calculs.recommandation import PLAN, _moins  # paramètres du plan de feu (issue #10), affichés tels quels
 
 E = html.escape
 CENTRAL = "2024-2025"  # météo d'hiver « type » (degrés-jours médians des 3 hivers)
@@ -74,7 +75,7 @@ def main(quand, a_faire=""):
          carte(f"{argent(min(r['valeur'] for r in rg), 0)}–{argent(max(r['valeur'] for r in rg), 0)}", "valeur évitée cet hiver (règle)", "ok", "protocole-sim.html",
                f"optimum a posteriori {argent(min(r['valeur'] for r in op), 0)}–{argent(max(r['valeur'] for r in op), 0)} ; feu chaque jour {argent(min(r['valeur'] for r in qd), 0)}–{argent(max(r['valeur'] for r in qd), 0)}"),
          carte("100 %", "événements Flex D couverts", "ok", "protocole-sim.html", f"{min(r['evt'] for r in rg):.0f} à {max(r['evt'] for r in rg):.0f} événements selon l'hiver"),
-         carte(f"{bpe[0]}–{bpe[-1]}", "bûches par événement", "neutre", "#regles", "allumer 30-60 min avant 6 h ou 16 h"),
+         carte(f"{bpe[0]}–{bpe[-1]}", "bûches par événement", "neutre", "#regles", "allumer ≈ 1 h 30 avant 6 h ou 16 h"),
          carte(f"+{argent(min(marg_r), 0)}–{argent(max(marg_r), 0)}", "valeur d'une corde de plus (règle)", "ko", "#appoint", f"pour ≈ {argent(H['prix_corde_remplacement'], 0)} : achat d'appoint non rentable"),
          "</div>"]
     h.append("<h2>En bref</h2><div class='info'><ol>"
@@ -147,7 +148,7 @@ def main(quand, a_faire=""):
              "<li><b>Le bois qui reste au 31 mars n'est pas perdu</b> : il sert l'hiver suivant (au même prix de kWh, ou plus cher si les tarifs montent). Brûler plus tôt ou plus tard est presque indifférent ; "
              "l'important est de ne pas manquer de bois les jours d'événement.</li></ul></div>")
     h.append("<h2 id='regles'>La règle de budget (révisée le 22 nov. 2026)</h2><ol>"
-             f"<li><b>Événement annoncé (avis la veille avant 15 h) : toujours.</b> Allumer 30 à 60 min avant 6 h ou 16 h et entretenir jusqu'à 10 h ou 20 h : "
+             f"<li><b>Événement annoncé (avis la veille avant 15 h) : toujours.</b> Allumer ≈ 1 h 30 avant 6 h ou 16 h (vers 4 h 30 ou 14 h 30 : le temps que le feu atteigne sa température) et entretenir pendant la fenêtre : "
              f"<b>{bpe[0]} bûches</b> par événement (5 sous −12 °C), le double si matin et soir. On peut puiser dans la réserve.</li>"
              f"<li><b>Réserve pour les événements</b> : garder {H['regle_buches_evt']} bûches par événement encore attendu "
              f"(≈ {H['evts_attendus']} par hiver, surtout en janvier). En pratique : ≈ {res_j['1er déc.']} bûches au 1er déc., ≈ {res_j['1er janv.']} au 1er janv., "
@@ -167,6 +168,21 @@ def main(quand, a_faire=""):
              "".join(f"<tr><td>{lib}</td><td class=n>{' / '.join(str(x) for x in stk_j[lib])}</td><td class=n>{res_j[lib]}</td></tr>" for lib, _ in jalons) + "</table>"
              "<p class='petit'>Rythme médian simulé : nov. " + nb(rythme["11"]) + " · déc. " + nb(rythme["12"]) + " · janv. " + nb(rythme["01"]) + " · févr. " + nb(rythme["02"]) + " · mars " + nb(rythme["03"]) +
              " bûches. Ordre des météos : 2023-24 / 2024-25 / 2025-26.</p>")
+    def _hp(hm):
+        return f"{int(hm[:2])} h" + (f" {hm[3:]}" if hm[3:] != "00" else "")
+    ch = PLAN["chauffe_min"]
+    h.append("<h2 id='moment'>Le moment du feu (23 nov. 2026)</h2><ul>"
+             f"<li><b>Un feu met ≈ {ch // 60} h {ch % 60:02d} à donner sa pleine chaleur</b> : on allume ce temps-là avant le moment visé, événements compris.</li>"
+             f"<li><b>Jours de feu</b> (jour cœur, ou jour froid dès le 1er janvier) : deux feux, à peu près la moitié des bûches chacun. "
+             f"Vers <b>{_hp(_moins(PLAN['matin'], ch))}</b> pour le creux du petit matin et la fenêtre de 6 h (laisser baisser vers {_hp(PLAN['fin_matin'])}) ; "
+             f"vers <b>{_hp(_moins(PLAN['apres_midi'], ch))}</b> pour la fenêtre de 16 h et le froid du soir.</li>"
+             f"<li><b>Journée douce</b> (max prévu ≥ {nb(PLAN['seuil_doux'])} °C) : chaque feu est plafonné à ≈ {PLAN['plafond_h']} h, puis on laisse baisser (au-delà, la maison devient trop chaude).</li>"
+             f"<li><b>La nuit</b> : réduire la charge vers {_hp(PLAN['reduire'])} pour ne pas surchauffer l'étage pendant le sommeil, sauf si le min prévu de la nuit est ≤ {nb(PLAN['nuit_froide'])} °C : "
+             f"alors dernière charge vers {_hp(PLAN['charge_nuit'])}. Si le creux de la nuit est prévu en soirée, le feu de l'après-midi reçoit les deux tiers des bûches.</li>"
+             "<li>Le plan ne change ni la décision de faire un feu ni le nombre de bûches (règles ci-dessus, sur la moyenne (max + min) / 2). "
+             "Heures et seuils : points de départ, à ajuster selon le confort. L'heure du min affichée vient de la prévision horaire d'EC (24 h), sinon d'Open-Meteo, marqué « (modèle) ».</li>"
+             "<li>Pourquoi le petit matin : sur trois hivers (Ste-Anne-de-Bellevue), le creux de la nuit tombe entre 4 h et 8 h une nuit sur deux, en soirée une nuit sur cinq ; "
+             f"la fenêtre de 6 h à 10 h est la plus froide de la journée. Analyse : <a href='{gabarit.DEPOT}/issues/10'>issue #10</a>.</li></ul>")
     h.append("<h2 id='appoint'>Un achat d'appoint vaut-il la peine ?</h2>"
              f"<p><b>Non.</b> Une corde de plus (≈ {H['buches_par_corde']} bûches, ≈ {argent(H['prix_corde_remplacement'], 0)}) ajouterait {' / '.join(argent(x, 0) for x in marg_r)} de valeur avec la règle "
              f"(selon la météo) et au mieux {argent(min(marg), 0)} à {argent(max(marg), 0)} en connaissant tout l'hiver d'avance. Le stock couvre déjà tous les événements ; chaque bûche de plus irait à un jour ordinaire, "

@@ -15,6 +15,32 @@ def _t(x):
     return "—" if x is None else (f"{x:.1f}".replace(".", ",").replace("-", "−") + " °C")
 
 
+def _deg(x):
+    return "—" if x is None else (f"{x:.1f}".replace(".", ",").replace(",0", "").replace("-", "−"))
+
+
+def min_max(v):
+    """« −3 / 1 °C » (min / max du jour) ou la moyenne seule si min et max manquent."""
+    if v.get("tmin") is None or v.get("tmax") is None:
+        return _t(v.get("t"))
+    return f"{_deg(v['tmin'])} / {_deg(v['tmax'])} °C"
+
+
+def heure_min(v):
+    """« min vers 7 h », « min vers 23 h la veille », suivi de « (modèle) » si l'heure vient d'Open-Meteo ; "" sans prévision horaire."""
+    h = v.get("heure_min")
+    if not h:
+        return ""
+    a = h["a"]; jour = v["date"]
+    if a.date() > jour:                       # 0 h : fin de la journée climatologique ; sinon la nuit qui suit
+        hh = "minuit" if a.hour == 0 else f"{a.hour} h le lendemain"
+    elif a.hour == 0:
+        hh = "minuit la veille" if a.date() == jour else f"{a.hour} h la veille"
+    else:
+        hh = f"{a.hour} h" + ("" if a.date() == jour else " la veille")
+    return f"min vers {hh}" + (" (modèle)" if "modèle" in (h.get("source") or "") else "")
+
+
 def _src(e):
     """Ligne « source » : prévision utilisée, rafraîchissement, et ce qui a échoué (mode ouvert visible)."""
     pv, maj = e["prevision"], e["maj"]
@@ -55,6 +81,31 @@ def texte_creux(e):
     return " ".join(out)
 
 
+def _hfr(hm):
+    h, m = int(hm[:2]), int(hm[3:5])
+    return f"{h} h" + (f" {m:02d}" if m else "")
+
+
+def bloc_plan(v):
+    """Plan de feu du jour (issue #10) : un petit tableau, seulement les jours de feu."""
+    pl = v.get("plan")
+    if not pl:
+        return ""
+    lignes = "".join(f"<tr><td>{E(f['feu'][:1].upper() + f['feu'][1:])}</td><td class=n>{_hfr(f['allumer'])}</td>"
+                     f"<td class=n>{'—' if f['feu'] == 'nuit froide' else _hfr(f['baisser'])}</td><td class=n>≈ {f['buches']}</td><td>{E(f['vise'])}</td></tr>"
+                     for f in pl["feux"])
+    notes = []
+    if pl["doux"]:
+        notes.append("max prévu près de 0 °C : chaque feu dure ≈ 4 h au plus, puis on laisse baisser")
+    if pl["nuit_froide"] and any(f["feu"] in ("nuit froide", "après-midi et soir") for f in pl["feux"]):
+        notes.append("nuit prévue ≤ −10 °C : dernière charge vers 21 h 30")
+    elif any(f["allumer"] >= "12:00" for f in pl["feux"]):
+        notes.append("réduire vers 19 h, sauf nuit ≤ −10 °C (étage, sommeil)")
+    return ("<table class='compact'><tr><th>Feu</th><th>Allumer</th><th>Dernière charge, puis laisser baisser</th><th>Bûches</th><th>Pour</th></tr>"
+            + lignes + "</table>" + f"<p class='petit'>Plan de feu : allumer ≈ 1 h 30 avant le moment visé{E(''.join(' ; ' + x for x in notes))}. "
+            "Heures de départ à ajuster selon le confort ; le nombre de bûches vient de la règle.</p>")
+
+
 def bloc_jour(e):
     r = e["reco"]; auj = r[1]
     if e["terminee"]:
@@ -71,8 +122,11 @@ def bloc_jour(e):
         evt = "<span class='losange' title='événement Flex D'>◆</span>" if v["evt"] else ""
         froid = " coeur" if v["coeur"] else ""
         vign.append(f"<div class='vignette{' actif' if k == 1 else ''}{' feu' if k and v.get('feu') else ''}{froid}'><span class='v-lib'>{lib}</span>"
-                    f"<b>{_t(v['t'])}</b>{evt}<span class='v-bas'>{bas}</span></div>")
-    detail = (f"min {_t(auj['tmin'])}, max {_t(auj['tmax'])}" if auj["tmin"] is not None else "")
+                    f"<b>{min_max(v)}</b>{evt}" + (f"<span class='v-sous'>{E(heure_min(v))}</span>" if heure_min(v) else "")
+                    + (f"<span class='v-sous'>moy. {_t(v['t'])}</span>" if v.get("tmin") is not None and v["t"] is not None else "")
+                    + f"<span class='v-bas'>{bas}</span></div>")
+    detail = " · ".join(x for x in (min_max(auj) if auj["tmin"] is not None else "", heure_min(auj),
+                                    f"moy. {_t(auj['t'])}" if auj["tmin"] is not None and auj["t"] is not None else "") if x)
     alertes, src = _src(e)
     raison = auj['raison'][:1].upper() + auj['raison'][1:]
     evt = (f"<p class='evt-jour'><b>Événement Flex D aujourd'hui : {E(auj['evenement'])}.</b> {E(auj['moment'][:1].upper() + auj['moment'][1:])}.</p>"
@@ -80,12 +134,14 @@ def bloc_jour(e):
     demain = r[2]
     if demain["evt"]:
         evt += f"<p class='evt-jour'><b>Événement Flex D demain : {E(demain['evenement'])}.</b> {E(demain['moment'][:1].upper() + demain['moment'][1:])}.</p>"
-    moment = (f" <span class='petit'>{E(auj['moment'][:1].upper() + auj['moment'][1:])}.</span>" if auj["moment"] and not auj["evenement"] else "")
+    moment = (f" <span class='petit'>{E(auj['moment'][:1].upper() + auj['moment'][1:])}.</span>" if auj["moment"] and not auj["evenement"] and not auj.get("plan") else "")
     cr = texte_creux(e)
     corps = (alertes + f"<p class='verdict {cl}'>{verdict}</p>{evt}<p class='raison'>{E(raison)}{'' if raison.endswith('.') else '.'}{moment}"
              + (f" <span class='petit'>({detail})</span>" if detail else "") + "</p>"
              f"<div class='vignettes'>{''.join(vign)}</div>"
-             + (f"<p class='petit'>Hier, observé : min {_t(r[0]['tmin'])}, max {_t(r[0]['tmax'])}, moyenne {_t(r[0]['t'])} ({E(r[0]['source'] or '')}).</p>" if r[0]["tmin"] is not None else "")
+             + bloc_plan(auj)
+             + (f"<p class='petit'>Hier, observé : min {_t(r[0]['tmin'])}" + (f" ({E(heure_min(r[0]).replace('min ', ''))})" if heure_min(r[0]) else "")
+                + f", max {_t(r[0]['tmax'])}, moyenne {_t(r[0]['t'])} ({E(r[0]['source'] or '')}).</p>" if r[0]["tmin"] is not None else "")
              + (f"<p class='petit'>{E(cr)}</p>" if cr else "")
              + f"<p class='source'>{src}. Règle de budget du protocole, événements annoncés par Hydro-Québec ; l'avis officiel d'Hydro-Québec a priorité.</p>")
     return bloc(f"Aujourd'hui · {dfr(auj['date'], jour=True)}", corps, "bloc-jour", "aujourdhui", ("strategie/index.html#regles", "règles"))
