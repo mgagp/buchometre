@@ -389,7 +389,8 @@ def main(quand):
          "<li>Colonnes : <code>date</code> (AAAA-MM-JJ) · <code>buches</code> (nombre) · <code>kwh</code> (consommation du jour, Espace client Hydro-Québec) · "
          "<code>evenement_hq</code> (oui/non) · <code>jour_temoin</code> (oui si jour froid volontairement sans feu) · <code>stock_compte</code> (facultatif : nombre de bûches comptées ce jour-là, remplace le stock calculé) · <code>remarque</code> (absence, feu de plaisir, invités…).</li>"
          "<li>Exemples : <code>2026-12-08,5,61,oui,non,,feu allumé 5 h 30 pour l'événement du matin</code> · <code>2026-12-01,0,72,non,non,330,tas recompté</code></li>"
-         "<li>Régénérer : <code>py outils\\preparer_donnees.py --maj</code> (télécharge météo et événements HQ) puis <code>py outils\\generer_site.py</code>, puis F5.</li></ol>",
+         "<li>Régénérer : <code>py outils\\preparer_donnees.py --maj</code> (télécharge météo et événements HQ) puis <code>py outils\\generer_site.py</code>, puis F5.</li>"
+         "<li>Publier : <code>git commit -am \"Saisie …\"</code> puis <code>git push</code> ; GitHub Actions régénère et republie le site en ligne (un commit par saisie, même pour plusieurs jours).</li></ol>",
          "<h2>Stock restant : réel vs plan</h2>", g_b,
          "<p class='petit'>Si la courbe réelle passe plus de 50 bûches sous le plan, ou sous la réserve : ne garder que les événements (règle 5).</p>",
          "<h2>Valeur cumulée : réel vs projection</h2>", g_v, g_k, tab,

@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+# Site généré par outils/generer_site.py (construit et publié par GitHub Actions)
+rapports/*
+!rapports/img/

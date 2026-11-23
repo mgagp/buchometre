@@ -62,6 +62,9 @@ tr.e td{background:#f6f6f6;color:#777;font-style:italic}tr.tot td{background:#ee
 .deux{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:900px){.deux{grid-template-columns:1fr}}
 .cal{max-width:620px}.barre{display:inline-block;height:9px;background:#ef6c00;opacity:.6;vertical-align:middle}
 .defile{max-height:640px;overflow:auto;border:1px solid #ddd}
+.tab{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}.tab>table{margin-top:0}
+img,svg{max-width:100%;height:auto}
+@media(max-width:700px){body{margin:10px}.nav{position:static;line-height:1.7}.carte{min-width:130px;flex:1 1 40%}.carte .v{font-size:20px}h1{font-size:22px}}
 code{background:#f4f4f4;padding:1px 4px;border-radius:3px}
 """
 
@@ -73,11 +76,13 @@ NAV = [("index.html", "Sommaire global"), ("mensuel.html", "Mensuel"), ("jours.h
 def page(nom, titre, corps, quand, sous=None):
     nav = " · ".join(f"<a href='{u}'{' class=actif' if u == nom else ''}>{E(t)}</a>" for u, t in NAV)
     mois = " · ".join(f"<a href='mois-{m}.html'>{E(COURT[m])}</a>" for m in MOIS)
-    h = (f"<!doctype html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'>"
+    h = (f"<!doctype html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"
          f"<title>Bois de chauffage – {E(titre)}</title><style>{CSS}</style></head><body>"
          f"<nav class='nav'>{nav} &nbsp;|&nbsp; Mois : {mois}</nav><h1>{E(titre)}</h1>" +
          (sous or (f"<p class='sous'>Hiver 2023-2024 · généré le {E(quand)} par <code>outils/generer_site.py</code> à partir de <code>data/</code>. "
          "Chiffrier source « Bois de chauffage » (Google Drive), lu en lecture seule.</p>")) + corps + "</body></html>")
+    # Tableaux larges : défilement horizontal sur téléphone
+    h = h.replace("<table", "<div class='tab'><table").replace("</table>", "</table></div>")
     with open(os.path.join(OUT, nom), "w", encoding="utf-8") as f:
         f.write(h)
 
@@ -89,6 +94,12 @@ def carte(v, l, cl="", lien=None, sous=""):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    # Copie de data/ dans le site (liens « data/… » valides en local comme sur GitHub Pages)
+    import shutil
+    os.makedirs(os.path.join(OUT, "data"), exist_ok=True)
+    for f in sorted(os.listdir(os.path.join(RACINE, "data"))):
+        if f.endswith((".csv", ".json")):
+            shutil.copy2(os.path.join(RACINE, "data", f), os.path.join(OUT, "data", f))
     quand = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     J = lire("data/journal_nettoye.csv")
     for j in J:
@@ -296,9 +307,9 @@ def main():
         rows.append(f"<tr{cl}>" + "".join(f"<td{' class=n' if c not in ('type_ligne', 'date_iso', 'drapeau') else ''}>{E(r[c] or "")}</td>" for c in cols) + "</tr>")
     corps = ("<p>Copie fidèle de la Feuille 1 (valeurs calculées par le chiffrier, non arrondies), une ligne par ligne de feuille, totaux mensuels compris. "
              "Rien n'est corrigé ici ; les corrections et drapeaux sont dans <code>journal_nettoye.csv</code>.</p><p>Fichiers : "
-             "<a href='../data/journal_brut.csv'>journal_brut.csv</a> · <a href='../data/journal_nettoye.csv'>journal_nettoye.csv</a> · "
-             "<a href='../data/meteo.csv'>meteo.csv</a> · <a href='../data/anomalies.csv'>anomalies.csv</a> · <a href='../data/factures.csv'>factures.csv</a> · "
-             "<a href='../data/modele.json'>modele.json</a></p><div class='defile'><table><tr>" + "".join(f"<th>{E(c)}</th>" for c in cols) + "</tr>" + "".join(rows) + "</table></div>")
+             "<a href='data/journal_brut.csv'>journal_brut.csv</a> · <a href='data/journal_nettoye.csv'>journal_nettoye.csv</a> · "
+             "<a href='data/meteo.csv'>meteo.csv</a> · <a href='data/anomalies.csv'>anomalies.csv</a> · <a href='data/factures.csv'>factures.csv</a> · "
+             "<a href='data/modele.json'>modele.json</a></p><div class='defile'><table><tr>" + "".join(f"<th>{E(c)}</th>" for c in cols) + "</tr>" + "".join(rows) + "</table></div>")
     page("donnees.html", "Données brutes", corps, quand)
 
     # ---------------- factures ----------------
