@@ -4,7 +4,9 @@ name: Publier le site
 #  - à chaque push sur main (saisie, code, thème) ;
 #  - chaque matin : cron « 45 10 * * * » = 10 h 45 UTC, soit 5 h 45 à Toronto en heure normale (UTC−5, nov. → mi-mars)
 #    et 6 h 45 en heure avancée (UTC−4, dès le 14 mars 2027). GitHub ne gère pas les fuseaux. Le déclenchement planifié
-#    peut avoir du retard (souvent 5 à 30 min, parfois plus) ; GitHub le suspend après 60 jours sans activité ;
+#    peut avoir du retard (souvent 5 à 30 min, parfois plus). Dans un dépôt public, GitHub désactive ce déclenchement
+#    après 60 jours sans activité du dépôt ; le commit quotidien de la recommandation, pendant la saison
+#    (1er nov. au 31 mars), relance ce délai. Hors saison, aucun commit automatique n'est fait ;
 #  - à la main (workflow_dispatch), qui se comporte comme le cron.
 # Chaque construction télécharge météo, prévisions (Environnement Canada, Open-Meteo) et événements Hydro-Québec (--maj)
 # pour elle seule ; si un téléchargement échoue, on garde les fichiers versionnés de sources/ (mode ouvert, affiché).
@@ -20,10 +22,10 @@ on:
     - cron: "45 10 * * *"
   workflow_dispatch:
 
+# Permissions minimales par job : le déploiement n'a pas besoin d'écrire dans le dépôt ;
+# seul le job de construction commite la recommandation du jour.
 permissions:
-  contents: write   # commit quotidien de la recommandation
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: pages
@@ -32,6 +34,10 @@ concurrency:
 jobs:
   construire:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # commit quotidien de la recommandation
+      pages: write      # artefact Pages
+      id-token: write
     env:
       TZ: America/Toronto
     steps:
@@ -76,6 +82,9 @@ jobs:
   deployer:
     needs: construire
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deploiement.outputs.page_url }}
