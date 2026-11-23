@@ -5,17 +5,19 @@ Le bûchomètre : combien d'électricité chaque bûche fait économiser, et qua
 **Site : https://mgagp.github.io/buchometre/** (consultable sur téléphone)
 
 Mesures de chauffage au bois d'une maison de Vaudreuil-Dorion (Québec) : bûches par jour, consommation
-Hydro-Québec, température. Le site présente l'hiver 2023-2024 (sommaire, mois, jours, données brutes, qualité,
-méthode), l'inventaire de la pile et le protocole de l'hiver 2026-2027 au tarif Flex D (étude météo, simulation,
-saisie et suivi).
+Hydro-Québec, température. À l'accueil, le tableau de bord de la saison en cours (recommandation du jour, stock,
+réel contre plan, événements de pointe Flex D, calendrier) ; puis le journal des saisies, la stratégie (règles,
+plan simulé, étude météo, inventaire), les archives (hiver 2023-2024) et la méthode.
 
 ## Fonctionnement
-- La saisie quotidienne se fait dans `data/saisie_2026-2027.csv`.
-- À chaque push sur `main`, GitHub Actions exécute `outils/preparer_donnees.py` puis `outils/generer_site.py`
-  et publie `rapports/` sur GitHub Pages.
+- La saisie quotidienne se fait dans `data/saisie_2026-2027.csv` ; les saisons sont déclarées dans `data/saisons.json`.
+- Trois couches : `outils/calculs/` (chiffres), `outils/rendu/` (HTML), `theme/` (apparence).
+- GitHub Actions reconstruit et publie `rapports/` sur GitHub Pages à chaque push sur `main` et chaque matin
+  (11 h 30 UTC, soit 6 h 30 à Toronto en hiver) avec la météo et les événements du jour.
 - Python 3, bibliothèque standard seulement. Pour générer localement :
 
-      python outils/preparer_donnees.py
+      python outils/preparer_donnees.py    # --maj pour rafraîchir météo, prévision et événements
       python outils/generer_site.py        # puis ouvrir rapports/index.html
+      python outils/verifier_site.py       # liens et thème
 
 Détails (structure, format de saisie, règles, modèle) : [AGENTS.md](AGENTS.md).
