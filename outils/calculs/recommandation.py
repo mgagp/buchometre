@@ -37,7 +37,7 @@ def besoin_fenetre(dj, H, cdj):
 
 def part_fenetre(plage, H):
     """Part de la chaleur d'une bûche livrée dans la fenêtre (décision de Marc du 2026-11-26) :
-    événement de l'après-midi (16 h-20 h, allumé vers 14 h 30) → part_buche_dans_fenetre (0,7) ;
+    événement de l'après-midi (16 h-20 h, feu allumé à 6 h et déjà à pleine chaleur) → part_buche_dans_fenetre (0,7) ;
     événement du matin (6 h-10 h, allumé à 6 h, pleine chaleur vers 7 h 30) → part_buche_dans_fenetre_matin (0,55).
     Plage inconnue (hiver simulé sans données HQ) : la valeur du matin, prudente (la plupart des événements Flex D
     tombent le matin)."""
@@ -136,8 +136,7 @@ PLAN = {
     "chauffe_min": 90,        # un feu met ≈ 1 h 30 à atteindre sa température optimale : allumer 1 h 30 avant le moment visé
     "matin": "06:00",         # creux du petit matin et fenêtre Flex D de 6 h (moment visé)
     "allumage_tot": "06:00",  # heure d'allumage au plus tôt, réaliste pour Marc (cadran à 5 h 30) : prime sur la règle des 1 h 30
-    "apres_midi": "16:00",    # fenêtre Flex D de 16 h : allumer vers 14 h 30 s'il n'y a pas de besoin le matin
-    "seuil_doux": -1.0,       # max prévu ≥ −1 °C (ou creux de la nuit prévu en soirée) : pas de besoin le matin
+    "seuil_doux": -1.0,       # max prévu ≥ −1 °C : signalé (champ « doux »), sans effet sur les heures
     "recharge_min": 120,      # un seul feu gardé vivant : recharger ≈ toutes les 2 h, jamais jusqu'aux braises
     "reduire": "19:00",       # dernière charge, puis réduire vers 19 h (sommeil, étage) …
     "nuit_froide": -10.0,     # … sauf si le min prévu de la nuit est ≤ −10 °C : dernière charge vers 21 h 30
@@ -174,8 +173,8 @@ def plan_feu(n, regle, plages, jour):
     """Heures du feu pour un jour où la règle en brûle n (le total ne change pas).
     Un seul feu continu, gardé vivant toute la journée par des recharges régulières (décision de Marc du 2026-11-26 :
     en 2023-24, le feu restait vivant toute la journée, jamais jusqu'aux braises entre deux fenêtres).
-    Allumer ≈ 1 h 30 avant le moment visé, pas avant PLAN["allumage_tot"] : à 6 h en général ; vers 14 h 30 pour un
-    événement de 16 h seul quand le matin n'a pas besoin de feu (max prévu ≥ −1 °C ou creux de la nuit en soirée).
+    Tout jour de feu s'allume à 6 h (PLAN["allumage_tot"]), même un jour où seul l'événement de 16 h est annoncé
+    (décision de Marc du 2026-11-26 : un jour d'événement est une journée de chauffe complète).
     Dernière charge vers 19 h, ou vers 21 h 30 si la nuit qui suit est ≤ −10 °C ; les bûches sont réparties sur les recharges.
     jour : {tmax, tmin_nuit (min prévu de la nuit qui suit), creux_soir (le creux de cette nuit tombe avant minuit)}.
     → {feux: [{feu, allumer, derniere_charge, baisser, buches, vise, charges: [{heure, buches}]}], doux, nuit_froide, creux_soir}
@@ -189,18 +188,13 @@ def plan_feu(n, regle, plages, jour):
     soir = bool(j.get("creux_soir"))
     plages = sorted(plages or [])
     matin = max(_moins(P["matin"], P["chauffe_min"]), P["allumage_tot"])
-    if plages and plages[0][:5] >= "12:00" and (doux or soir):
-        deb = plages[0][:5]
-        allumer = max(_moins(deb, P["chauffe_min"]), P["allumage_tot"])
-        vise = f"fenêtre Flex D {plage_fr(plages[0])}, pas de besoin le matin"
+    allumer = matin
+    if plages:
+        vise = "journée complète ; fenêtre" + ("s" if len(plages) > 1 else "") + " Flex D " + " et ".join(plage_fr(p) for p in plages)
+        if plages[0][:5] < "12:00":
+            vise += f", pleine chaleur vers {_h(_plus_min(allumer, P['chauffe_min']))}"
     else:
-        allumer = matin
-        if plages:
-            vise = "journée complète ; fenêtre" + ("s" if len(plages) > 1 else "") + " Flex D " + " et ".join(plage_fr(p) for p in plages)
-            if plages[0][:5] < "12:00":
-                vise += f", pleine chaleur vers {_h(_plus_min(allumer, P['chauffe_min']))}"
-        else:
-            vise = "journée complète : creux du petit matin, puis froid du soir" + (", creux prévu en soirée" if soir else "")
+        vise = "journée complète : creux du petit matin, puis froid du soir" + (", creux prévu en soirée" if soir else "")
     dern = P["charge_nuit"] if froide else P["reduire"]
     if plages:
         dern = max(dern, _moins(plages[-1].split("-")[1], 60))  # entretenir jusqu'à la fin de la dernière fenêtre
@@ -242,13 +236,6 @@ def plage_fr(plage):
     """« 06:00-10:00 » → « 6 h-10 h »."""
     a, b = plage.split("-")
     return f"{_h(a)}-{_h(b)}"
-
-
-def moment_evt(plage):
-    """« 16:00-20:00 » → « vers 14 h 30 (événement 16 h-20 h) » : allumer 1 h 30 avant le début, pas avant
-    PLAN["allumage_tot"] (« 06:00-10:00 » → « vers 6 h »)."""
-    deb, fin = plage.split("-")
-    return f"vers {_h(max(_moins(deb, PLAN['chauffe_min']), PLAN['allumage_tot']))} (événement {_h(deb)}-{_h(fin)})"
 
 
 def recommander(d, jour, plages, stock, reserve, ecart_plan, P, saison, frein=False):

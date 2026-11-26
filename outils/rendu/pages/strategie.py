@@ -107,7 +107,7 @@ def main(quand, a_faire=""):
                  ("Flex D, pendant un événement (si toute la chaleur tombe dans la fenêtre)", F["pointe"], V["flex_evt"]),
                  ("Pour comparaison : tarif D 2026, 2e tranche", TD["p2"], V["tarif_D"])]) + "</table>"
              f"<p class='petit'>Valeur = {nb(kb, 2)} kWh/bûche × prix × 1,14975 (TPS+TVQ). Pendant un événement, on suppose qu'une bûche livre {pct(H['part_buche_dans_fenetre'])} "
-             f"de sa chaleur dans la fenêtre de 16 h (feu allumé vers 14 h 30), mais seulement {pct(H['part_buche_dans_fenetre_matin'])} dans celle de 6 h (feu allumé à 6 h, pleine chaleur vers 7 h 30), "
+             f"de sa chaleur dans la fenêtre de 16 h (feu allumé dès 6 h, déjà à pleine chaleur), mais seulement {pct(H['part_buche_dans_fenetre_matin'])} dans celle de 6 h (feu allumé à 6 h, pleine chaleur vers 7 h 30), "
              f"et que le besoin de chauffage dans la fenêtre est plafonné (≈ {nb(H['facteur_pointe_horaire'], 2)} × la moyenne horaire du jour) : "
              f"la fenêtre seule demande {bpe[0]} à {bpe[-1]} bûches le matin, {bpe_pm[0]} à {bpe_pm[-1]} l'après-midi (−6 °C à −18 °C). "
              f"Le jour d'un événement reste une journée de chauffe complète ({bje[0]} à {bje[-1]} bûches).</p>")
@@ -182,9 +182,9 @@ def main(quand, a_faire=""):
              f"mais jamais avant <b>{_hp(PLAN['allumage_tot'])}</b> (heure réaliste pour Marc). Le matin, la pleine chaleur arrive donc vers {_hp(_plus_min(PLAN['allumage_tot'], ch))}.</li>"
              f"<li><b>Un seul feu, gardé vivant toute la journée</b> (décision du 26 nov. ; c'est ce que Marc faisait en 2023-24, jamais jusqu'aux braises entre deux fenêtres) : "
              f"on allume une fois, puis on recharge ≈ toutes les {PLAN['recharge_min'] // 60} h ; les bûches de la journée sont réparties sur les recharges. "
-             f"Jours de feu et jours d'événement : allumer à <b>{_hp(max(_moins(PLAN['matin'], ch), PLAN['allumage_tot']))}</b> pour le creux du petit matin. "
-             f"Événement de 16 h sans besoin le matin (max prévu ≥ {nb(PLAN['seuil_doux'])} °C, ou creux de la nuit prévu en soirée) : allumer vers "
-             f"<b>{_hp(max(_moins(PLAN['apres_midi'], ch), PLAN['allumage_tot']))}</b>. <span class='petit'>Avant le 26 nov. : deux feux, le matin et vers 14 h 30.</span></li>"
+             f"Tous les jours de feu, jours d'événement compris : allumer à <b>{_hp(max(_moins(PLAN['matin'], ch), PLAN['allumage_tot']))}</b>, "
+             "même quand seul l'événement de 16 h est annoncé et que le matin est doux (journée de chauffe complète). "
+             "<span class='petit'>Avant le 26 nov. : deux feux, le matin et l'après-midi.</span></li>"
              f"<li><b>La nuit</b> : dernière charge vers {_hp(PLAN['reduire'])}, puis réduire pour ne pas surchauffer l'étage pendant le sommeil, sauf si le min prévu de la nuit est ≤ {nb(PLAN['nuit_froide'])} °C : "
              f"alors dernière charge vers {_hp(PLAN['charge_nuit'])}. Un jour d'événement, on entretient au moins jusqu'à la fin de la fenêtre.</li>"
              "<li>Le plan ne change ni la décision de faire un feu ni le nombre de bûches (règles ci-dessus, sur la moyenne (max + min) / 2). "

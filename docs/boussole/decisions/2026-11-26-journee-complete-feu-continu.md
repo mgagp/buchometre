@@ -10,7 +10,7 @@
 Marc chauffe en « journée complète » : un feu allumé le matin et gardé vivant toute la journée. En 2023-24, un jour de
 feu comptait en médiane 9 bûches (moyenne 8,8), 11 à 14 par grand froid. Les règles 3 et 4 (jours froids, jusqu'à
 12 bûches) collaient à cette pratique, mais pas la règle 1 : un jour d'événement Flex D ne prévoyait que 4 à 5 bûches,
-pour la seule fenêtre, et le plan de feu coupait la journée en deux feux (matin, puis vers 14 h 30), ce qui supposait
+pour la seule fenêtre, et le plan de feu coupait la journée en deux feux (matin, puis après-midi), ce qui supposait
 deux allumages. La réserve (5 bûches par événement attendu, ≈ 115 au départ) était dimensionnée pour ces petits feux.
 
 ## Options
@@ -30,8 +30,8 @@ Option B, en quatre points confirmés par Marc :
 2. **Réserve** : 9 bûches par événement encore attendu (≈ 207 au 1er décembre, au lieu de ≈ 115).
 3. **Plan de feu** : un seul feu, gardé vivant toute la journée par des recharges régulières (en 2023-24, Marc ne
    le laissait jamais tomber aux braises entre le matin et l'après-midi). Allumer ≈ 1 h 30 avant le moment visé,
-   jamais avant 6 h ; vers 14 h 30 pour un événement de 16 h quand le matin n'a pas besoin de feu ; dernière charge
-   vers 19 h, ou vers 21 h 30 si la nuit est ≤ −10 °C. Les bûches du jour sont réparties sur les recharges.
+   jamais avant 6 h : tout jour de feu s'allume à 6 h, même quand seul l'événement de 16 h est annoncé et que le
+   matin est doux (précision de Marc du 26 nov., 11 h) ; dernière charge vers 19 h, ou vers 21 h 30 si la nuit est ≤ −10 °C. Les bûches du jour sont réparties sur les recharges.
 4. **Part de la chaleur d'une bûche livrée dans la fenêtre** : 55 % pour un événement du matin (feu allumé à 6 h,
    pleine chaleur vers 7 h 30), 70 % pour l'après-midi (inchangé). Plage inconnue (hiver simulé sans données
    d'Hydro-Québec) : 55 %, par prudence.
@@ -44,6 +44,6 @@ Option B, en quatre points confirmés par Marc :
 - La réserve plus haute ne change presque rien à la simulation : elle n'a jamais refusé de feu les jours froids avant mars.
 - Remplace les quantités de la règle 1 et de la réserve de `2026-11-22-regle-de-budget-avec-reserve`, et le partage
   en deux feux de `2026-11-23-min-max-moment-du-feu`.
-- À vérifier avec les saisies de l'hiver : bûches réellement brûlées un jour d'événement, confort quand le feu de
-  16 h est allumé vers 14 h 30 (les 11 bûches tiennent alors en ≈ 4 h 30), et la part de 55 % le matin
+- À vérifier avec les saisies de l'hiver : bûches réellement brûlées un jour d'événement, rythme des recharges,
+  et la part de 55 % le matin
   (il faudrait les kWh horaires pour la mesurer).

@@ -29,7 +29,7 @@ H = {
     "flex_D_2026": {"p1_hiver": 0.04886, "p2_hiver": 0.09103, "pointe": 0.46463, "acces": 0.46154,
                     "max_heures": 120, "duree_evt": 4, "max_evt_jour": 2},
     "credit_hivernal_2026": 0.58490,    # $/kWh effacé (option fermée aux nouveaux abonnés depuis le 2026-03-31)
-    "part_buche_dans_fenetre": 0.70,    # part de la chaleur d'une bûche livrée dans la fenêtre de 16 h-20 h, feu allumé vers 14 h 30 (hypothèse)
+    "part_buche_dans_fenetre": 0.70,    # part de la chaleur d'une bûche livrée dans la fenêtre de 16 h-20 h, feu allumé à 6 h, déjà à pleine chaleur (hypothèse)
     "part_buche_dans_fenetre_matin": 0.55,  # 2026-11-26 (Marc) : fenêtre de 6 h-10 h, feu allumé à 6 h, pleine chaleur vers 7 h 30 (hypothèse)
     "facteur_pointe_horaire": 1.25,     # besoin de chauffage aux heures 6-10 h / 16-20 h vs moyenne du jour (hypothèse)
     "buches_par_dj": 0.45,              # plafond « raisonnable » de bûches/jour = 0,45 × degrés-jours (≈ 9 à 20 DJ, 13 à 30 DJ)

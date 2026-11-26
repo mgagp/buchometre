@@ -122,7 +122,7 @@ Archives avec son tableau de bord figé. À revoir à ce moment : inventaire de 
   depuis l'inventaire ; la projection = la règle sur la prévision, puis la dépense moyenne des 3 hivers simulés.
 - Moment du feu (issue #10, révisé le 2026-11-26) : un seul feu gardé vivant toute la journée, rechargé ≈ toutes les 2 h
   (bûches réparties sur les recharges). Allumer ≈ 1 h 30 avant le moment visé, mais pas avant 6 h (`PLAN["allumage_tot"]`) :
-  à 6 h en général (pleine chaleur vers 7 h 30) ; vers 14 h 30 pour un événement de 16 h sans besoin le matin ;
+  tout jour de feu s'allume à 6 h (pleine chaleur vers 7 h 30), même avec le seul événement de 16 h ;
   dernière charge vers 19 h, puis réduire, sauf nuit ≤ −10 °C (dernière charge vers 21 h 30).
   Part de la chaleur d'une bûche livrée dans la fenêtre : 55 % le matin, 70 % l'après-midi.
   La décision et le nombre de bûches restent calculés sur la moyenne (max + min) / 2.
