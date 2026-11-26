@@ -5552,7 +5552,7 @@
    6
   ]
  },
- "meteo_derniere_date": "2026-11-22",
+ "meteo_derniere_date": "2026-11-24",
  "evts_par_hiver": {
   "2024-2025": {
    "jours": 19,
@@ -5570,5 +5570,5 @@
    "heures": 0
   }
  },
- "n_saisie": 0
+ "n_saisie": 4
 }
