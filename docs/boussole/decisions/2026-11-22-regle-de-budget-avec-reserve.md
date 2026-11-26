@@ -1,7 +1,8 @@
 # Règle de budget avec réserve pour les événements
 
 - **Date :** 2026-11-22
-- **Statut :** Acceptée (confirmée par Marc le 2026-11-23) ; seuils des règles 3 et 4 remplacés par `2026-11-22-regles-assouplies`
+- **Statut :** Acceptée (confirmée par Marc le 2026-11-23) ; seuils des règles 3 et 4 remplacés par `2026-11-22-regles-assouplies` ;
+  règle 1 (4 à 5 bûches) et réserve de 5 bûches par événement remplacées par `2026-11-26-journee-complete-feu-continu`
 - **Source :** Protocole 2026-27, commits `e02ce05` et `29c24ee`.
 
 ## Contexte

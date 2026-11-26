@@ -1,7 +1,8 @@
 # Température du jour en min / max, heure du min et plan de feu
 
 - **Date :** 2026-11-23
-- **Statut :** Acceptée (options A1, B1 et C1 ajustée, choisies par Marc) ; heures et seuils en « Hypothèse » (points de départ)
+- **Statut :** Acceptée (options A1, B1 et C1 ajustée, choisies par Marc) ; heures et seuils en « Hypothèse » (points de départ) ;
+  partage en deux feux remplacé par un seul feu continu : `2026-11-26-journee-complete-feu-continu`
 - **Source :** [issue #10](https://github.com/mgagp/buchometre/issues/10) : analyse chiffrée et échanges avec Marc du 23 nov. (15 h 13 à 15 h 18) ;
   amendement du 23 nov., 15 h 49 (feu du matin à 6 h).
 

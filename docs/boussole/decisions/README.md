@@ -12,7 +12,7 @@ explicite), **Proposée** (en attente de Marc), **Remplacée par …** (on garde
 | 2026-11-22 | [Météo de référence : Vaudreuil-Dorion](2026-11-22-meteo-vaudreuil-dorion.md) | Remplacée par `2026-11-23-meteo-observee-ec` (archives) ; prévisions inchangées |
 | 2026-11-22 | [Pas de corde d'appoint cet hiver](2026-11-22-pas-de-corde-appoint.md) | Acceptée |
 | 2026-11-22 | [Prix du bois de référence : 425 $ tout compris, +25 $ par corde](2026-11-22-prix-du-bois-reference.md) | Acceptée |
-| 2026-11-22 | [Règle de budget avec réserve pour les événements](2026-11-22-regle-de-budget-avec-reserve.md) | Acceptée |
+| 2026-11-22 | [Règle de budget avec réserve pour les événements](2026-11-22-regle-de-budget-avec-reserve.md) | Acceptée ; règle 1 et réserve remplacées par `2026-11-26-journee-complete-feu-continu` |
 | 2026-11-22 | [Règles de chauffe assouplies avec le nouveau stock](2026-11-22-regles-assouplies.md) | Acceptée |
 | 2026-11-22 | [Une recommandation chaque matin, par notification plutôt que par courriel](2026-11-22-routine-du-matin.md) | Acceptée |
 | 2026-11-22 | [Un site statique régénéré par script](2026-11-22-site-statique-par-script.md) | Acceptée |
@@ -26,11 +26,12 @@ explicite), **Proposée** (en attente de Marc), **Remplacée par …** (on garde
 | 2026-11-23 | [Publier le projet sur GitHub Pages sous le nom buchometre](2026-11-23-publication-github-pages.md) | Acceptée |
 | 2026-11-23 | [Relooking après la restructuration, limité au thème](2026-11-23-relooking-apres-restructuration.md) | Acceptée |
 | 2026-11-23 | [Identité visuelle : camp de bûcherons cartoon](2026-11-23-identite-camp-bucherons.md) | Acceptée |
-| 2026-11-23 | [Température du jour en min / max, heure du min et plan de feu](2026-11-23-min-max-moment-du-feu.md) | Acceptée |
+| 2026-11-23 | [Température du jour en min / max, heure du min et plan de feu](2026-11-23-min-max-moment-du-feu.md) | Acceptée ; deux feux remplacés par `2026-11-26-journee-complete-feu-continu` |
 | 2026-11-23 | [Météo observée canonique : Environnement Canada, Ste-Anne-de-Bellevue 1](2026-11-23-meteo-observee-ec.md) | Acceptée |
 | 2026-11-23 | [Recommandation canonique dans le dépôt](2026-11-23-recommandation-canonique.md) | Acceptée |
 | 2026-11-23 | [Restructurer le site en mode saison](2026-11-23-restructuration-mode-saison.md) | Acceptée |
 | 2026-11-23 | [Un commit par saisie, sans pull request](2026-11-23-un-commit-par-saisie.md) | Acceptée |
+| 2026-11-26 | [Jour d'événement = journée complète, réserve de 9 bûches, un seul feu continu](2026-11-26-journee-complete-feu-continu.md) | Acceptée |
 
 ## Modèle
 
