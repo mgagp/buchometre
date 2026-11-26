@@ -168,7 +168,7 @@ def etat(saison, aujourd_hui=None):
         j = meteo.get(d)
         if not j:
             return None
-        n, _ = RG.decider(len(EV.get(d, [])), max(18 - j["t"], 0), j["t"], j["coeur"], crit[0] <= d <= crit[1],
+        n, _ = RG.decider(plages.get(d, []), max(18 - j["t"], 0), j["t"], j["coeur"], crit[0] <= d <= crit[1],
                           RG.apres_liberation(d, rp["liberation"]), st_, reserve(d), H, kb, cdj, rp, frein)
         return n
 

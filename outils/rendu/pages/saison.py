@@ -88,23 +88,22 @@ def _hfr(hm):
 
 
 def bloc_plan(v):
-    """Plan de feu du jour (issue #10) : un petit tableau, seulement les jours de feu."""
+    """Plan de feu du jour : un seul feu continu, ses recharges (décision du 2026-11-26), seulement les jours de feu."""
     pl = v.get("plan")
     if not pl:
         return ""
-    lignes = "".join(f"<tr><td>{E(f['feu'][:1].upper() + f['feu'][1:])}</td><td class=n>{_hfr(f['allumer'])}</td>"
-                     f"<td class=n>{'—' if f['feu'] == 'nuit froide' else _hfr(f['baisser'])}</td><td class=n>≈ {f['buches']}</td><td>{E(f['vise'])}</td></tr>"
-                     for f in pl["feux"])
-    notes = []
-    if pl["doux"]:
-        notes.append("max prévu près de 0 °C : chaque feu dure ≈ 4 h au plus, puis on laisse baisser")
-    if pl["nuit_froide"] and any(f["feu"] in ("nuit froide", "après-midi et soir") for f in pl["feux"]):
-        notes.append("nuit prévue ≤ −10 °C : dernière charge vers 21 h 30")
-    elif any(f["allumer"] >= "12:00" for f in pl["feux"]):
-        notes.append("réduire vers 19 h, sauf nuit ≤ −10 °C (étage, sommeil)")
-    return ("<table class='compact'><tr><th>Feu</th><th>Allumer</th><th>Dernière charge, puis laisser baisser</th><th>Bûches</th><th>Pour</th></tr>"
-            + lignes + "</table>" + f"<p class='petit'>Plan de feu : allumer ≈ 1 h 30 avant le moment visé, pas avant {_hfr(PLAN['allumage_tot'])}{E(''.join(' ; ' + x for x in notes))}. "
-            "Heures de départ à ajuster selon le confort ; le nombre de bûches vient de la règle.</p>")
+    f = pl["feux"][0]
+    lignes = "".join(f"<tr><td class=n>{_hfr(c['heure'])}</td><td>{'Allumer' if i == 0 else ('Dernière charge' if i == len(f['charges']) - 1 else 'Recharger')}</td>"
+                     f"<td class=n>≈ {c['buches']}</td></tr>" for i, c in enumerate(f["charges"]))
+    notes = [f"pour : {f['vise']}"]
+    if pl["nuit_froide"]:
+        notes.append(f"nuit prévue ≤ {nb(PLAN['nuit_froide'])} °C : dernière charge vers {_hfr(PLAN['charge_nuit'])}")
+    else:
+        notes.append(f"après la dernière charge, réduire pour la nuit (étage, sommeil)")
+    return ("<table class='compact'><tr><th>Heure</th><th>Un seul feu, gardé vivant</th><th>Bûches</th></tr>"
+            + lignes + "</table>" + f"<p class='petit'>Plan de feu : allumer ≈ 1 h 30 avant le moment visé, pas avant {_hfr(PLAN['allumage_tot'])}, "
+            f"puis recharger ≈ toutes les {PLAN['recharge_min'] // 60} h sans laisser tomber aux braises{E(''.join(' ; ' + x for x in notes))}. "
+            "Heures à ajuster selon le confort ; le nombre de bûches vient de la règle.</p>")
 
 
 def bloc_jour(e):

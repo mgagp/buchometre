@@ -6,7 +6,8 @@ Un seul endroit pour la règle :
   - creux()       : détection des creux froids (anomalie de la moyenne sur 3 jours sous la médiane mobile de 31 jours),
                     la même pour l'analyse historique et pour la prévision ;
   - recommander() : le verdict lisible du jour (feu ou non, bûches, moment, raison) ;
-  - plan_feu()    : les heures d'allumage, de dernière charge et de baisse (décision de Marc du 2026-11-23, issue #10) ;
+  - plan_feu()    : un seul feu continu : allumage, recharges et dernière charge (décisions de Marc du 2026-11-23,
+                    issue #10, et du 2026-11-26) ;
                     il ne change ni la décision ni le nombre de bûches.
 Les paramètres viennent de data/protocole.json → hypotheses (écrites par protocole.py).
 """
@@ -34,9 +35,48 @@ def besoin_fenetre(dj, H, cdj):
     return 4 * H["facteur_pointe_horaire"] * cdj * dj / 24
 
 
-def buches_evt(dj, H, kb, cdj):
-    """Bûches pour couvrir un événement (chaleur livrée à 70 % dans la fenêtre si le feu est allumé juste avant)."""
-    return math.ceil(besoin_fenetre(dj, H, cdj) / (kb * H["part_buche_dans_fenetre"]))
+def part_fenetre(plage, H):
+    """Part de la chaleur d'une bûche livrée dans la fenêtre (décision de Marc du 2026-11-26) :
+    événement de l'après-midi (16 h-20 h, allumé vers 14 h 30) → part_buche_dans_fenetre (0,7) ;
+    événement du matin (6 h-10 h, allumé à 6 h, pleine chaleur vers 7 h 30) → part_buche_dans_fenetre_matin (0,55).
+    Plage inconnue (hiver simulé sans données HQ) : la valeur du matin, prudente (la plupart des événements Flex D
+    tombent le matin)."""
+    if plage and plage[:5] >= "12:00":
+        return H["part_buche_dans_fenetre"]
+    return H["part_buche_dans_fenetre_matin"]
+
+
+def liste_plages(evts):
+    """Événements d'un jour : un nombre (plages inconnues) ou une liste de plages « 06:00-10:00 »."""
+    if isinstance(evts, (list, tuple)):
+        return list(evts)
+    return [None] * int(evts or 0)
+
+
+def buches_evt(dj, H, kb, cdj, plage=None):
+    """Bûches pour couvrir la fenêtre d'un seul événement (besoin de la fenêtre / chaleur livrée dans la fenêtre)."""
+    return math.ceil(besoin_fenetre(dj, H, cdj) / (kb * part_fenetre(plage, H)))
+
+
+def buches_jour_evt(evts, dj, H, kb, cdj):
+    """Règle 1 (décision de Marc du 2026-11-26) : un jour d'événement est une journée de chauffe complète.
+    Bûches = le plus grand de : besoin des fenêtres, plafond des règles 3 et 4 (0,45 × DJ, au plus regle_max_coeur)
+    et plancher d'une journée complète (regle_plancher_evt) ; au plus buches_max_jour."""
+    pl = liste_plages(evts)
+    if not pl:
+        return 0
+    besoin = sum(buches_evt(dj, H, kb, cdj, p) for p in pl)
+    return min(max(besoin, plafond(dj, H, H["regle_max_coeur"]), H["regle_plancher_evt"]), H["buches_max_jour"])
+
+
+def kwh_dans_fenetres(kwh, evts, dj, H, cdj):
+    """kWh évités pendant les fenêtres d'événement : chaque fenêtre reçoit sa part du feu du jour
+    (× part_fenetre), plafonnée par son besoin."""
+    pl = liste_plages(evts)
+    if not pl:
+        return 0.0
+    b = besoin_fenetre(dj, H, cdj)
+    return sum(min(b, kwh / len(pl) * part_fenetre(p, H)) for p in pl)
 
 
 def plafond(dj, H, maxi):
@@ -49,13 +89,13 @@ def apres_liberation(d, lib):
 
 
 def decider(nevt, dj, t, coeur, dans_crit, apres_lib, stock, reserve, H, kb, cdj, rp=None, frein=False):
-    """Règle de budget pour un jour → (bûches, règle appliquée).
-    1 : événement annoncé → toujours ; 5 : plus de 50 bûches sous le plan → événements seulement ;
+    """Règle de budget pour un jour → (bûches, règle appliquée). nevt : nombre d'événements ou liste de leurs plages.
+    1 : événement annoncé → toujours, journée de chauffe complète (buches_jour_evt) ; 5 : plus de 50 bûches sous le plan → événements seulement ;
     3 : jour cœur d'un creux froid, T moy ≤ seuil, période critique → feu (≤ max) si le stock reste au-dessus de la réserve ;
     4 : surplus libéré dès le 1er janvier, T moy ≤ 0 °C, même condition de réserve ; 2 : feu refusé pour protéger la réserve."""
     rp = rp or regles(H)
     if nevt:
-        return min(nevt * buches_evt(dj, H, kb, cdj), stock), "1"
+        return min(buches_jour_evt(nevt, dj, H, kb, cdj), stock), "1"
     if frein:
         return 0, "5"
     if coeur and t <= rp["seuil"] and dans_crit:
@@ -90,19 +130,18 @@ def creux(js, H):
     return runs
 
 
-# Plan de feu (issue #10) : points de départ, à ajuster avec les retours de confort de Marc.
+# Plan de feu (issue #10 ; un seul feu continu depuis la décision de Marc du 2026-11-26) : points de départ,
+# à ajuster avec les retours de confort de Marc.
 PLAN = {
     "chauffe_min": 90,        # un feu met ≈ 1 h 30 à atteindre sa température optimale : allumer 1 h 30 avant le moment visé
     "matin": "06:00",         # creux du petit matin et fenêtre Flex D de 6 h (moment visé)
     "allumage_tot": "06:00",  # heure d'allumage au plus tôt, réaliste pour Marc (cadran à 5 h 30) : prime sur la règle des 1 h 30
-    "apres_midi": "16:00",    # fenêtre Flex D de 16 h et froid du soir → allumer vers 14 h 30
-    "fin_matin": "10:00",     # fin de la fenêtre du matin : on laisse baisser ensuite
-    "seuil_doux": -1.0,       # max prévu ≥ −1 °C : chaque feu plafonné à ≈ 4 h, puis on laisse baisser
-    "plafond_h": 4,
-    "reduire": "19:00",       # réduire la charge vers 19 h (sommeil, étage) …
+    "apres_midi": "16:00",    # fenêtre Flex D de 16 h : allumer vers 14 h 30 s'il n'y a pas de besoin le matin
+    "seuil_doux": -1.0,       # max prévu ≥ −1 °C (ou creux de la nuit prévu en soirée) : pas de besoin le matin
+    "recharge_min": 120,      # un seul feu gardé vivant : recharger ≈ toutes les 2 h, jamais jusqu'aux braises
+    "reduire": "19:00",       # dernière charge, puis réduire vers 19 h (sommeil, étage) …
     "nuit_froide": -10.0,     # … sauf si le min prévu de la nuit est ≤ −10 °C : dernière charge vers 21 h 30
     "charge_nuit": "21:30",
-    "buches_nuit": 2,
 }
 
 
@@ -122,10 +161,25 @@ def _plus_min(hm, minutes):
     return _hm(dt.datetime(2000, 1, 1, int(hm[:2]), int(hm[3:5])) + dt.timedelta(minutes=minutes))
 
 
+def _minutes(hm):
+    return int(hm[:2]) * 60 + int(hm[3:5])
+
+
+def _de_minutes(m):
+    m = int(round(m / 15.0) * 15)
+    return f"{m // 60:02d}:{m % 60:02d}"
+
+
 def plan_feu(n, regle, plages, jour):
     """Heures du feu pour un jour où la règle en brûle n (le total ne change pas).
+    Un seul feu continu, gardé vivant toute la journée par des recharges régulières (décision de Marc du 2026-11-26 :
+    en 2023-24, le feu restait vivant toute la journée, jamais jusqu'aux braises entre deux fenêtres).
+    Allumer ≈ 1 h 30 avant le moment visé, pas avant PLAN["allumage_tot"] : à 6 h en général ; vers 14 h 30 pour un
+    événement de 16 h seul quand le matin n'a pas besoin de feu (max prévu ≥ −1 °C ou creux de la nuit en soirée).
+    Dernière charge vers 19 h, ou vers 21 h 30 si la nuit qui suit est ≤ −10 °C ; les bûches sont réparties sur les recharges.
     jour : {tmax, tmin_nuit (min prévu de la nuit qui suit), creux_soir (le creux de cette nuit tombe avant minuit)}.
-    → {feux: [{feu, allumer, derniere_charge, baisser, buches, vise}], doux, nuit_froide, creux_soir} ou None."""
+    → {feux: [{feu, allumer, derniere_charge, baisser, buches, vise, charges: [{heure, buches}]}], doux, nuit_froide, creux_soir}
+    ou None. « feux » garde la forme d'une liste (un seul élément) pour les lecteurs de data/recommandation.json."""
     if not n:
         return None
     P = PLAN; j = jour or {}
@@ -133,39 +187,32 @@ def plan_feu(n, regle, plages, jour):
     doux = tmax is not None and tmax >= P["seuil_doux"]
     froide = tnuit is not None and tnuit <= P["nuit_froide"]
     soir = bool(j.get("creux_soir"))
-    feux = []
-    if regle == "1" and plages:
-        par = [n // len(plages) + (1 if i < n % len(plages) else 0) for i in range(len(plages))]
-        for p, b in zip(plages, par):
-            deb, fin = p.split("-")
-            allumer = max(_moins(deb, P["chauffe_min"]), P["allumage_tot"])
-            plein = _plus_min(allumer, P["chauffe_min"])
-            dern = _moins(fin, 60)
-            if doux:
-                dern = min(dern, _plus(allumer, P["plafond_h"]))
-            if deb >= "12:00" and not froide:
-                dern = min(dern, P["reduire"])
-            feux.append({"feu": f"événement {_h(deb)}-{_h(fin)}", "allumer": allumer, "derniere_charge": dern, "baisser": dern,
-                         "buches": b, "vise": f"fenêtre Flex D {_h(deb)}-{_h(fin)}" + (f" ; pleine chaleur vers {_h(plein)}" if plein > deb else "")})
+    plages = sorted(plages or [])
+    matin = max(_moins(P["matin"], P["chauffe_min"]), P["allumage_tot"])
+    if plages and plages[0][:5] >= "12:00" and (doux or soir):
+        deb = plages[0][:5]
+        allumer = max(_moins(deb, P["chauffe_min"]), P["allumage_tot"])
+        vise = f"fenêtre Flex D {plage_fr(plages[0])}, pas de besoin le matin"
     else:
-        n1 = round(n / 3) if soir else n // 2
-        n2 = n - n1
-        # nuit ≤ −10 °C : pas de réduction à 19 h, dernière charge vers 21 h 30 ; si la journée est douce (feu plafonné
-        # à ≈ 4 h), cette charge de nuit est une petite relance à part
-        nuit = min(P["buches_nuit"], n2 // 2) if froide and doux and n2 >= 4 else 0
-        a1 = max(_moins(P["matin"], P["chauffe_min"]), P["allumage_tot"])
-        a2 = max(_moins(P["apres_midi"], P["chauffe_min"]), P["allumage_tot"])
-        d1 = min(_plus(a1, P["plafond_h"]), P["fin_matin"]) if doux else P["fin_matin"]
-        d2 = min(_plus(a2, P["plafond_h"]), P["reduire"]) if doux else (P["charge_nuit"] if froide else P["reduire"])
-        if n1:
-            feux.append({"feu": "matin", "allumer": a1, "derniere_charge": d1, "baisser": d1, "buches": n1,
-                         "vise": "creux du petit matin et fenêtre de 6 h"})
-        feux.append({"feu": "après-midi et soir", "allumer": a2, "derniere_charge": d2, "baisser": d2,
-                     "buches": n2 - nuit, "vise": "fenêtre de 16 h et froid du soir" + (" (creux prévu en soirée : priorité)" if soir else "")
-                     + (f" ; nuit prévue à {fmt(tnuit)} °C : pas de réduction à 19 h" if froide and not doux else "")})
-        if nuit:
-            feux.append({"feu": "nuit froide", "allumer": P["charge_nuit"], "derniere_charge": P["charge_nuit"], "baisser": P["charge_nuit"],
-                         "buches": nuit, "vise": f"nuit prévue à {fmt(tnuit)} °C"})
+        allumer = matin
+        if plages:
+            vise = "journée complète ; fenêtre" + ("s" if len(plages) > 1 else "") + " Flex D " + " et ".join(plage_fr(p) for p in plages)
+            if plages[0][:5] < "12:00":
+                vise += f", pleine chaleur vers {_h(_plus_min(allumer, P['chauffe_min']))}"
+        else:
+            vise = "journée complète : creux du petit matin, puis froid du soir" + (", creux prévu en soirée" if soir else "")
+    dern = P["charge_nuit"] if froide else P["reduire"]
+    if plages:
+        dern = max(dern, _moins(plages[-1].split("-")[1], 60))  # entretenir jusqu'à la fin de la dernière fenêtre
+    if froide:
+        vise += f" ; nuit prévue à {fmt(tnuit)} °C : pas de réduction à {_h(P['reduire'])}"
+    t0, t1 = _minutes(allumer), _minutes(dern)
+    m = max(1, min(n, math.ceil((t1 - t0) / P["recharge_min"]) + 1))
+    heures = [_de_minutes(t0 + (t1 - t0) * i / (m - 1)) if m > 1 else allumer for i in range(m)]
+    par = [n // m + (1 if i < n % m else 0) for i in range(m)]
+    charges = [{"heure": h, "buches": b} for h, b in zip(heures, par)]
+    feux = [{"feu": "feu continu", "allumer": allumer, "derniere_charge": heures[-1], "baisser": heures[-1], "buches": n,
+             "vise": vise, "charges": charges}]
     return {"feux": feux, "doux": doux, "nuit_froide": froide, "creux_soir": soir}
 
 
@@ -173,21 +220,16 @@ def texte_plan(pl):
     """Plan → phrase courte (champ « moment »)."""
     if not pl:
         return ""
-    out = []
-    for f in pl["feux"]:
-        if f["feu"] == "nuit froide":
-            out.append(f"dernière charge vers {_h(f['allumer'])} (≈ {f['buches']} bûches, {f['vise']})")
-            continue
-        x = f"allumer vers {_h(f['allumer'])}" + (f" ({f['vise']})" if f["feu"].startswith("événement") else "")
-        x += f", ≈ {f['buches']} bûches, dernière charge vers {_h(f['derniere_charge'])}"
-        if f["feu"] == "après-midi et soir":
-            relance = any(g["feu"] == "nuit froide" for g in pl["feux"])
-            x += ("" if relance else ", puis réduire pour la nuit") if f["baisser"] <= PLAN["reduire"] else f" (nuit froide : pas de réduction à {_h(PLAN['reduire'])})"
-        out.append(x)
-    t = " ; puis ".join(out)
-    if pl["doux"]:
-        t += f" (max prévu ≥ {fmt(PLAN['seuil_doux'])} °C : ≈ {PLAN['plafond_h']} h de feu au plus, puis laisser baisser)"
-    return t
+    f = pl["feux"][0]; ch = f["charges"]
+    x = f"un seul feu gardé vivant : allumer vers {_h(f['allumer'])} ({f['vise']})"
+    if len(ch) > 1:
+        q = sorted({c["buches"] for c in ch[1:]})
+        qt = f"{q[0]}" if len(q) == 1 else f"{q[0]} à {q[-1]}"
+        x += f", ≈ {ch[0]['buches']} bûches à l'allumage, puis {qt} bûche{'s' if q[-1] > 1 else ''} toutes les ≈ {PLAN['recharge_min'] // 60} h"
+        x += f" ; dernière charge vers {_h(f['derniere_charge'])}"
+    x += f" (≈ {f['buches']} bûches en tout)"
+    x += ", puis réduire pour la nuit" if f["derniere_charge"] <= PLAN["reduire"] else ""
+    return x
 
 
 def _h(hm):
@@ -220,14 +262,17 @@ def recommander(d, jour, plages, stock, reserve, ecart_plan, P, saison, frein=Fa
     fx0, _ = (dt.date.fromisoformat(x) for x in saison["flex_d"])
     evt = " et ".join(plage_fr(p) for p in plages)
     t = jour["t"] if jour else None
-    # Règle 1 en premier, même sans prévision (on prend alors la réserve par événement : 5 bûches)
+    # Règle 1 en premier, même sans prévision (on prend alors le plancher d'une journée complète)
     if plages:
         dj = max(18 - t, 0) if t is not None else None
-        par = buches_evt(dj, H, kb, cdj) if dj is not None else H["regle_buches_evt"]
-        n = min(par * len(plages), int(stock))
+        n0 = buches_jour_evt(plages, dj, H, kb, cdj) if dj is not None else H["regle_plancher_evt"]
+        n = min(n0, int(stock))
         pl = plan_feu(n, "1", plages, jour)
+        fen = ((" ; la fenêtre seule en demande " if len(plages) == 1 else " ; les fenêtres seules en demandent ")
+               + str(sum(buches_evt(dj, H, kb, cdj, p) for p in plages))) if dj is not None else ""
         return {"feu": True, "buches": n, "regle": "1", "moment": texte_plan(pl), "plan": pl, "evenement": evt,
-                "raison": f"événement Flex D annoncé ({evt}) : environ {par} bûches par événement, allumées environ 1 h 30 avant (pas avant {_h(PLAN['allumage_tot'])})"
+                "raison": f"événement Flex D annoncé ({evt}) : journée de chauffe complète, environ {n} bûches{fen} ; "
+                          f"un seul feu gardé vivant, allumé environ 1 h 30 avant (pas avant {_h(PLAN['allumage_tot'])})"
                           + ("" if t is not None else " (prévision indisponible : quantité par défaut)")}
     if t is None:
         return {"feu": None, "buches": 0, "regle": "", "moment": "", "plan": None, "evenement": "",

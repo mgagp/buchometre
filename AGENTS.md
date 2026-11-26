@@ -49,7 +49,7 @@ puis jours les plus froids), avec un stock de bois limité.
 - `outils/calculs/` (données → chiffres, **aucun HTML**) : `preparer_donnees.py` (2023-24, modèle, téléchargements),
   `protocole.py` (météo, creux, simulation), `inventaire.py`, `saison.py` (état de la saison à une date),
   `recommandation.py` (**source canonique** : règle de budget, creux froids, verdict du jour ; la simulation l'utilise aussi ;
-  `PLAN` et `plan_feu()` : heures d'allumage et de baisse, sans effet sur la décision),
+  `PLAN` et `plan_feu()` : allumage, recharges et dernière charge, sans effet sur la décision),
   `prevision.py` (Environnement Canada, Open-Meteo en secours ; heure du min : horaire EC sur 24 h, sinon Open-Meteo « (modèle) »), `meteo.py` (**météo observée canonique** : EC
   Ste-Anne-de-Bellevue 1, repli Montréal-Trudeau, puis Open-Meteo étiqueté « estimation par modèle » ; moyenne = (max + min) / 2),
   `valider_saisie.py`, `saisons.py`.
@@ -115,12 +115,15 @@ Archives avec son tableau de bord figé. À revoir à ce moment : inventaire de 
   Hors hiver : tarif D (7,065 / 11,142 ¢).
 - Stock de départ 2026-27 : inventaire mesuré de la pile, ≈ 876 bûches (≈ 4,1 cordes de face, bûches de 16 po,
   une seule rangée : confirmé par Marc).
-- Règles de chauffe : événements toujours (4-5 bûches) ; réserve de 5 bûches par événement attendu ; jours ≤ −5 °C
+- Règles de chauffe (révisées le 2026-11-26) : événement toujours, en journée de chauffe complète (≥ 11 bûches, au plus 15) ;
+  réserve de 9 bûches par événement attendu ; jours ≤ −5 °C
   jusqu'à 12 bûches ; surplus libéré dès le 1er janvier ; 50 bûches sous le plan → événements seulement.
   Une seule implémentation : `outils/calculs/recommandation.py`. Le plan = la règle appliquée à la météo réelle
   depuis l'inventaire ; la projection = la règle sur la prévision, puis la dépense moyenne des 3 hivers simulés.
-- Moment du feu (issue #10) : allumer ≈ 1 h 30 avant le moment visé, mais pas avant 6 h (`PLAN["allumage_tot"]`) :
-  feu du matin et événement de 6 h allumés à 6 h (pleine chaleur vers 7 h 30), 14 h 30 pour 16 h ;
-  jours de feu en deux feux (≈ moitié-moitié) ; max prévu ≥ −1 °C → ≈ 4 h par feu ; réduire vers 19 h sauf nuit ≤ −10 °C
-  (dernière charge vers 21 h 30). La décision et le nombre de bûches restent calculés sur la moyenne (max + min) / 2.
+- Moment du feu (issue #10, révisé le 2026-11-26) : un seul feu gardé vivant toute la journée, rechargé ≈ toutes les 2 h
+  (bûches réparties sur les recharges). Allumer ≈ 1 h 30 avant le moment visé, mais pas avant 6 h (`PLAN["allumage_tot"]`) :
+  à 6 h en général (pleine chaleur vers 7 h 30) ; vers 14 h 30 pour un événement de 16 h sans besoin le matin ;
+  dernière charge vers 19 h, puis réduire, sauf nuit ≤ −10 °C (dernière charge vers 21 h 30).
+  Part de la chaleur d'une bûche livrée dans la fenêtre : 55 % le matin, 70 % l'après-midi.
+  La décision et le nombre de bûches restent calculés sur la moyenne (max + min) / 2.
 - Limite connue : la prime d'événement réelle n'est pas mesurée (il faudrait les kWh horaires).

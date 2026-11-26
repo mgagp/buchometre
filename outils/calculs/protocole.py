@@ -29,7 +29,8 @@ H = {
     "flex_D_2026": {"p1_hiver": 0.04886, "p2_hiver": 0.09103, "pointe": 0.46463, "acces": 0.46154,
                     "max_heures": 120, "duree_evt": 4, "max_evt_jour": 2},
     "credit_hivernal_2026": 0.58490,    # $/kWh effacé (option fermée aux nouveaux abonnés depuis le 2026-03-31)
-    "part_buche_dans_fenetre": 0.70,    # part de la chaleur d'une bûche livrée dans la fenêtre de 4 h si allumée juste avant (hypothèse)
+    "part_buche_dans_fenetre": 0.70,    # part de la chaleur d'une bûche livrée dans la fenêtre de 16 h-20 h, feu allumé vers 14 h 30 (hypothèse)
+    "part_buche_dans_fenetre_matin": 0.55,  # 2026-11-26 (Marc) : fenêtre de 6 h-10 h, feu allumé à 6 h, pleine chaleur vers 7 h 30 (hypothèse)
     "facteur_pointe_horaire": 1.25,     # besoin de chauffage aux heures 6-10 h / 16-20 h vs moyenne du jour (hypothèse)
     "buches_par_dj": 0.45,              # plafond « raisonnable » de bûches/jour = 0,45 × degrés-jours (≈ 9 à 20 DJ, 13 à 30 DJ)
     "buches_max_jour": 15,              # maximum observé en 2023-24
@@ -42,7 +43,10 @@ H = {
     "cordes_restantes_ancien": 1.5,
     "buches_par_corde": 232,            # dérivé : 928 bûches projetées / 4 cordes (2023-24) — fragile
     "prix_corde_remplacement": 131.25,  # 425 $ / 4 + 25 $
-    "regle_buches_evt": 5,              # bûches réservées par événement attendu
+    "regle_buches_evt": 9,              # 2026-11-26 (Marc) : bûches réservées par événement attendu (avant : 5) ; ≈ 9 par événement
+                                        # quand chaque jour d'événement est une journée complète (2024-26 : 8,8 bûches par événement)
+    "regle_plancher_evt": 11,           # 2026-11-26 (Marc) : un jour d'événement est une journée de chauffe complète, au moins 11 bûches
+                                        # (comme les règles 3 et 4 par grand froid ; avant : 4-5 bûches pour la seule fenêtre)
     "regle_seuil_coeur": -5.0,          # révisé 2026-11-22 (stock 876) : feu un jour cœur si T moy prévue ≤ −5 °C (avant : −8 °C)
     "regle_max_coeur": 12,              # révisé : au plus 12 bûches un jour sans événement (avant : 10 ; plafond d'absorption 0,45 × DJ)
     "regle_liberation": "01-01",        # révisé : dès le 1er janv. (avant : 1er févr.) le surplus au-dessus de la réserve va à tout jour ≤ 0 °C
@@ -127,6 +131,7 @@ def analyser(ecrire=True):
         for i, d in enumerate(ds):
             jours.append({"hiver": nom, "date": d, "t": t[i], "tmin": M[d]["tmin"], "tmax": M[d]["tmax"], "s3": s3[i], "base": base[i],
                           "anom": s3[i] - base[i], "dj": max(18 - t[i], 0), "evt": len(EV.get(d, [])),
+                          "plages": sorted(f"{e['debut']}-{e['fin']}" for e in EV.get(d, [])),
                           "evt_h": sum(e["heures"] for e in EV.get(d, []))})
 
     # ---------- climatologie et période critique ----------
@@ -209,8 +214,10 @@ def analyser(ecrire=True):
         for j in js:
             if reel:
                 j["nevt"] = j["evt"] if dt.date(y, 12, 1) <= j["date"] <= dt.date(y + 1, 3, 31) else 0
+                j["pl"] = list(j["plages"]) if j["nevt"] else []
             else:
                 j["nevt"] = 1 if (j["t"] <= H["seuil_evt_predit"] and j["date"].month in (12, 1, 2, 3)) else 0
+                j["pl"] = [None] * j["nevt"]  # plage inconnue : part du matin (prudente)
         sdj = sum(j["dj"] for j in js)
         B = H["buches_saison"]
         strat = {}
@@ -221,8 +228,7 @@ def analyser(ecrire=True):
         reste = B
         evts = sorted([j for j in js if j["nevt"]], key=lambda j: -j["dj"])
         for j in evts:
-            need = math.ceil(j["nevt"] * besoin_fenetre(j["dj"]) / (kb * H["part_buche_dans_fenetre"]))
-            n = min(max(need, plafond(j["dj"])), reste); c[j["date"]] = n; reste -= n
+            n = min(RG.buches_jour_evt(j["pl"], j["dj"], H, kb, cdj), reste); c[j["date"]] = n; reste -= n
         cands = sorted([j for j in js if not j["nevt"] and j.get("creux") and dans(j, crit_deb, crit_fin)], key=lambda j: (-int(j.get("coeur", False)), -j["dj"]))
         for j in cands:
             n = min(plafond(j["dj"]), reste); c[j["date"]] = n; reste -= n
@@ -236,7 +242,7 @@ def analyser(ecrire=True):
                 kwh = kb * b
                 besoin = j["nevt"] * besoin_fenetre(j["dj"])
                 if nomS == "cible":
-                    dans_f = min(besoin, kwh * H["part_buche_dans_fenetre"])
+                    dans_f = RG.kwh_dans_fenetres(kwh, j["pl"], j["dj"], H, cdj)
                 else:
                     dans_f = min(besoin, kwh * 4 * j["nevt"] / 24)
                 base = kwh * F["p2_hiver"] * tx
@@ -266,13 +272,14 @@ def analyser(ecrire=True):
         if j["hiver"] in ("2024-2025", "2025-2026") and j["evt"]:
             mois_evt[j["date"].month] = mois_evt.get(j["date"].month, 0) + j["evt"] / 2
     def n_evt_jour(j):
-        return sum(math.ceil(besoin_fenetre(j["dj"]) / (kb * H["part_buche_dans_fenetre"])) for _ in range(j["nevt"]))
+        """Règle 1 : un jour d'événement est une journée complète (calculs/recommandation.py)."""
+        return RG.buches_jour_evt(j.get("pl", j["nevt"]), j["dj"], H, kb, cdj)
     def evaluer(js, plan):
         tot = {"buches": 0, "base": 0, "prime": 0, "prime_kwh": 0, "jours_feu": 0, "jours_evt": 0, "evt": 0, "evt_couverts": 0, "par_mois": {}}
         for j in js:
             b = plan.get(j["date"], 0); kwh = kb * b
             besoin = j["nevt"] * besoin_fenetre(j["dj"])
-            dans_f = min(besoin, kwh * H["part_buche_dans_fenetre"])
+            dans_f = RG.kwh_dans_fenetres(kwh, j["pl"], j["dj"], H, cdj)
             tot["buches"] += b; tot["base"] += kwh * F["p2_hiver"] * tx; tot["prime"] += dans_f * (F["pointe"] - F["p2_hiver"]) * tx
             tot["prime_kwh"] += dans_f; tot["jours_feu"] += b > 0; tot["evt"] += j["nevt"]; tot["jours_evt"] += (j["nevt"] > 0 and b > 0)
             tot["evt_couverts"] += j["nevt"] if (besoin and dans_f >= 0.95 * besoin) else 0
@@ -285,7 +292,7 @@ def analyser(ecrire=True):
         for j in js:
             reserve = H["regle_buches_evt"] * H["evts_attendus"] * part_apres(jour_saison(j["date"]))
             # règle de budget canonique (calculs/recommandation.py)
-            n, _ = RG.decider(j["nevt"], j["dj"], j["t"], j.get("coeur"), dans(j, crit_deb, crit_fin),
+            n, _ = RG.decider(j["pl"], j["dj"], j["t"], j.get("coeur"), dans(j, crit_deb, crit_fin),
                               RG.apres_liberation(j["date"], rp["liberation"]), st_, reserve, H, kb, cdj, rp)
             plan[j["date"]] = n; st_ -= n
             courbe.append((j["date"].isoformat(), round(st_), round(reserve)))
@@ -318,7 +325,7 @@ def analyser(ecrire=True):
                 stk = B
                 for j in js:
                     b = pr.get(j["date"], 0); stk -= b
-                    kwh = kb * b; besoin = j["nevt"] * besoin_fenetre(j["dj"]); dans_f = min(besoin, kwh * H["part_buche_dans_fenetre"])
+                    kwh = kb * b; besoin = j["nevt"] * besoin_fenetre(j["dj"]); dans_f = RG.kwh_dans_fenetres(kwh, j["pl"], j["dj"], H, cdj)
                     if j["date"].month == 2 and j["date"].day == 29:
                         continue
                     sims_stock.append({"hiver_meteo": nom, "date_2026_2027": j["date"].replace(year=j["date"].year + (2026 - y)).isoformat(),
@@ -336,7 +343,10 @@ def analyser(ecrire=True):
     stock = {"buches": stock0, "cordes": stock0 / H["buches_par_corde"], "valeur_remplacement": stock0 / H["buches_par_corde"] * H["prix_corde_remplacement"],
              "inventaire": {k: v for k, v in INV.items() if k != "sections"}, "resultats": stock_res,
              "courbes": courbes_stock, "evts_par_mois_moyen": mois_evt,
-             "buches_par_evt_typ": [n_evt_jour({"nevt": 1, "dj": dj}) for dj in (24, 28, 32, 36)]}
+             # besoin de la seule fenêtre (matin / après-midi) et bûches d'un jour d'événement, de −6 °C à −18 °C
+             "buches_par_evt_typ": [RG.buches_evt(dj, H, kb, cdj, "06:00-10:00") for dj in (24, 28, 32, 36)],
+             "buches_par_evt_typ_pm": [RG.buches_evt(dj, H, kb, cdj, "16:00-20:00") for dj in (24, 28, 32, 36)],
+             "buches_jour_evt_typ": [n_evt_jour({"nevt": 1, "dj": dj}) for dj in (24, 28, 32, 36)]}
 
     # courbe « part des bûches → part du gain » (stratégie ciblée)
     courbes = {}
